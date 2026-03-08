@@ -87,6 +87,37 @@ class SettingsManager:
         self._s.setValue("view/stretch_small", value)
         self._s.sync()
 
+    @property
+    def backdrop_color(self) -> str:
+        return self._s.value("view/backdrop_color", "#1e1e1e")
+
+    @backdrop_color.setter
+    def backdrop_color(self, value: str) -> None:
+        self._s.setValue("view/backdrop_color", value)
+        self._s.sync()
+
+    # ------------------------------------------------------------------ #
+    # Behaviour preferences                                                #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def confirm_delete(self) -> bool:
+        return self._s.value("behavior/confirm_delete", True, type=bool)
+
+    @confirm_delete.setter
+    def confirm_delete(self, value: bool) -> None:
+        self._s.setValue("behavior/confirm_delete", value)
+        self._s.sync()
+
+    @property
+    def start_fullscreen(self) -> bool:
+        return self._s.value("behavior/start_fullscreen", False, type=bool)
+
+    @start_fullscreen.setter
+    def start_fullscreen(self, value: bool) -> None:
+        self._s.setValue("behavior/start_fullscreen", value)
+        self._s.sync()
+
     # ------------------------------------------------------------------ #
     # Generic helpers                                                      #
     # ------------------------------------------------------------------ #

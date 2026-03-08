@@ -178,7 +178,7 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
 [Code]
 
 // Notify Windows Explorer that file associations have changed
-procedure SHChangeNotify(wEventId: LongInt; uFlags: Cardinal; dwItem1: Pointer; dwItem2: Pointer);
+procedure SHChangeNotify(wEventId: LongInt; uFlags: Cardinal; dwItem1: DWORD; dwItem2: DWORD);
   external 'SHChangeNotify@shell32.dll stdcall';
 
 // ── Upgrade detection ────────────────────────────────────────────────────────
@@ -236,8 +236,8 @@ begin
 
   // Tell Windows Explorer to refresh its file-type cache
   if CurStep = ssPostInstall then begin
-    if IsTaskSelected('assoc_images') or IsTaskSelected('assoc_raw') or
-       IsTaskSelected('assoc_fits')   or IsTaskSelected('assoc_psd') then
-      SHChangeNotify($08000000, $0000, nil, nil);  // SHCNE_ASSOCCHANGED
+    if WizardIsTaskSelected('assoc_images') or WizardIsTaskSelected('assoc_raw') or
+       WizardIsTaskSelected('assoc_fits')   or WizardIsTaskSelected('assoc_psd') then
+      SHChangeNotify($08000000, $0000, 0, 0);  // SHCNE_ASSOCCHANGED
   end;
 end;

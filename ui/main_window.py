@@ -8,7 +8,7 @@ from typing import Optional
 
 from PySide6.QtCore import Qt, QThreadPool, QPoint, Signal, QEvent
 from PySide6.QtCore import QFile
-from PySide6.QtGui import QAction, QImage, QKeySequence, QMouseEvent, QMovie
+from PySide6.QtGui import QAction, QColor, QImage, QKeySequence, QMouseEvent, QMovie
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QStackedWidget, QFileDialog, QMessageBox, QStatusBar, QLabel, QPushButton,
@@ -18,6 +18,7 @@ from core.image_loader import ImageLoader, ImageHandle
 from core.cache_manager import CacheManager
 from models.folder_model import FolderModel, _MEDIA_EXTENSIONS
 from ui.about_dialog import AboutDialog
+from ui.settings_dialog import SettingsDialog
 from ui.media_player import MediaPlayer
 from ui.image_viewer import ImageViewer
 from ui.overlay_bar import OverlayBar
@@ -216,6 +217,11 @@ class MainWindow(QMainWindow):
         self._stretch_act.setChecked(stretch)
         self._container.viewer.set_stretch_small(stretch)
 
+        self._container.viewer.set_backdrop_color(QColor(self._settings.backdrop_color))
+
+        if self._settings.start_fullscreen:
+            self.showFullScreen()
+
         last_folder = self._settings.last_folder
         if last_folder:
             log.info("Restoring last folder: %s", last_folder)
@@ -330,6 +336,13 @@ class MainWindow(QMainWindow):
         self._stretch_act.setShortcut(QKeySequence("S"))
         self._stretch_act.toggled.connect(self._on_stretch_toggled)
         view_menu.addAction(self._stretch_act)
+
+        # Edit
+        edit_menu = mb.addMenu("&Edit")
+        settings_act = QAction("&Settings…", self)
+        settings_act.setShortcut(QKeySequence("Ctrl+,"))
+        settings_act.triggered.connect(self._open_settings)
+        edit_menu.addAction(settings_act)
 
         # Help
         help_menu = mb.addMenu("&Help")
@@ -655,15 +668,16 @@ class MainWindow(QMainWindow):
         if entry is None:
             return
         path = entry.path
-        reply = QMessageBox.question(
-            self,
-            "Move to Trash",
-            f"Move to Trash:\n{path.name}",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        if self._settings.confirm_delete:
+            reply = QMessageBox.question(
+                self,
+                "Move to Trash",
+                f"Move to Trash:\n{path.name}",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
         self._container.viewer._stop_movie()
         self._container.media_player.stop()
@@ -686,6 +700,10 @@ class MainWindow(QMainWindow):
             self._lbl_path.setText("")
             self._lbl_dims.setText("")
             self._lbl_zoom.setText("")
+
+    def _open_settings(self) -> None:
+        dlg = SettingsDialog(self._settings, self._container.viewer, self)
+        dlg.exec()
 
     def _show_about(self) -> None:
         dlg = AboutDialog(self)

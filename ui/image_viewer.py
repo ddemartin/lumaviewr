@@ -53,6 +53,7 @@ class ImageViewer(QWidget):
 
         self._stretch_small: bool = True
         self._movie: Optional[QMovie] = None
+        self._bg_color: QColor = QColor(30, 30, 30)
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(QSize(200, 200))
@@ -119,8 +120,10 @@ class ImageViewer(QWidget):
         self._stretch_small = enabled
         if self._fit_mode:
             self._recompute_fit()
-            self.update()
-            self.zoom_changed.emit(self._native_zoom())
+
+    def set_backdrop_color(self, color: QColor) -> None:
+        self._bg_color = color
+        self.update()
 
     def set_fit_mode(self) -> None:
         """Scale image to fill the viewport."""
@@ -201,7 +204,7 @@ class ImageViewer(QWidget):
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         # Background
-        painter.fillRect(self.rect(), QColor(30, 30, 30))
+        painter.fillRect(self.rect(), self._bg_color)
 
         if self._image is None or self._image.isNull():
             painter.setPen(QColor(120, 120, 120))

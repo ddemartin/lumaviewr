@@ -10,5 +10,8 @@ astropy>=6.0.0
 # fitsio>=1.2.0  # faster C backend, uncomment if needed
 numpy>=1.26.0
 
+# Optional — PSD support
+psd-tools>=1.9.0
+
 # Optional — memory stats
 psutil>=5.9.0
