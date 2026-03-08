@@ -23,15 +23,50 @@ except ImportError:
     _PSD_OK = False
 
 
+def _best_pil(psd) -> "object":
+    """
+    Return the best available PIL Image from an already-open PSDImage.
+
+    Fallback chain (best quality → least memory):
+      1. composite()  — full layer composite, highest quality
+      2. topil()      — merged pixels saved with "Maximize Compatibility"
+      3. thumbnail    — embedded thumbnail (small but instant)
+      4. gray image   — placeholder when no pixel data is available at all
+    """
+    from PIL import Image
+
+    # 1. Full composite
+    try:
+        pil = psd.composite()
+        if pil is not None:
+            return pil
+    except (MemoryError, Exception):
+        pass
+
+    # 2. Merged pixel data (requires Maximize Compatibility)
+    try:
+        pil = psd.topil()
+        if pil is not None:
+            return pil
+    except (MemoryError, Exception):
+        pass
+
+    # 3. Embedded thumbnail
+    try:
+        thumb = psd.thumbnail()
+        if thumb is not None:
+            return thumb
+    except Exception:
+        pass
+
+    # 4. Gray placeholder
+    return Image.new("RGB", (psd.width, psd.height), (128, 128, 128))
+
+
 def _composite(path: Path) -> "object":
     """Open a PSD and return a composited PIL Image."""
     psd = _PSDImage.open(str(path))
-    pil = psd.composite()
-    if pil is None:
-        # Some PSDs have no pixel data at all — return a blank image
-        from PIL import Image
-        pil = Image.new("RGB", (psd.width, psd.height), (128, 128, 128))
-    return pil
+    return _best_pil(psd)
 
 
 class PsdDecoder(BaseDecoder):
@@ -74,7 +109,21 @@ class PsdDecoder(BaseDecoder):
         if not _PSD_OK:
             return QImage()
         from PIL import Image
-        pil = _composite(path)
+        psd = _PSDImage.open(str(path))
+
+        # For preview, prefer the embedded thumbnail when it is large enough,
+        # to avoid decompressing the full image into memory.
+        pil = None
+        try:
+            thumb = psd.thumbnail()
+            if thumb is not None and max(thumb.width, thumb.height) >= min(max_size, 256):
+                pil = thumb
+        except Exception:
+            pass
+
+        if pil is None:
+            pil = _best_pil(psd)
+
         pil = _normalize_mode(pil)
         pil.thumbnail((max_size, max_size), Image.LANCZOS)
         return _pil_to_qimage(pil)

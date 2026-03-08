@@ -44,10 +44,15 @@ class ThreadWorker(QRunnable):
         try:
             result = self._fn(*self._args, **self._kwargs)
             self.signals.finished.emit(result)
+        except RuntimeError:
+            pass  # app shutting down — signal receiver already deleted
         except Exception as exc:
-            self.signals.error.emit(
-                f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
-            )
+            try:
+                self.signals.error.emit(
+                    f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
+                )
+            except RuntimeError:
+                pass
 
 
 # ------------------------------------------------------------------ #
@@ -79,10 +84,15 @@ class LoadImageWorker(QRunnable):
         try:
             handle = self._loader.load(self._path)
             self.signals.finished.emit(handle)
+        except RuntimeError:
+            pass
         except Exception as exc:
-            self.signals.error.emit(
-                f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
-            )
+            try:
+                self.signals.error.emit(
+                    f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
+                )
+            except RuntimeError:
+                pass
 
 
 # ------------------------------------------------------------------ #
@@ -120,8 +130,13 @@ class FullResWorker(QRunnable):
             if self._cancel and self._cancel.is_set():
                 return
             self.signals.ready.emit(self._path, image)
+        except RuntimeError:
+            pass
         except Exception as exc:
-            self.signals.error.emit(self._path, str(exc))
+            try:
+                self.signals.error.emit(self._path, str(exc))
+            except RuntimeError:
+                pass
 
 
 # ------------------------------------------------------------------ #
@@ -150,5 +165,10 @@ class ThumbnailWorker(QRunnable):
             decoder = self._loader._select_decoder(self._path)
             thumb   = decoder.decode_preview(self._path, self._thumb_size)
             self.signals.ready.emit(self._path, thumb)
+        except RuntimeError:
+            pass
         except Exception as exc:
-            self.signals.error.emit(self._path, str(exc))
+            try:
+                self.signals.error.emit(self._path, str(exc))
+            except RuntimeError:
+                pass

@@ -191,6 +191,8 @@ class MainWindow(QMainWindow):
         self._fullres_cancel: Optional["threading.Event"] = None
         self._current_handle: Optional[ImageHandle] = None
         self._thumbnails_loaded: bool = False
+        self._tray_available: bool = False
+        self._app = None  # set by LumaApp after construction
 
         self.setWindowTitle("Luma Viewer")
         self.resize(1280, 800)
@@ -219,6 +221,9 @@ class MainWindow(QMainWindow):
 
         self._container.viewer.set_backdrop_color(QColor(self._settings.backdrop_color))
 
+        if self._settings.filmstrip_visible:
+            self._left_panel.show()
+
         if self._settings.start_fullscreen:
             self.showFullScreen()
 
@@ -231,13 +236,21 @@ class MainWindow(QMainWindow):
             self._update_nav_bar()
             self._load_current()
 
+    def set_tray_available(self, available: bool) -> None:
+        """Called by LumaApp after creating or destroying the tray icon."""
+        self._tray_available = available
+
     def closeEvent(self, event) -> None:
-        """Persist window position, size, screen and splitter state on close."""
-        self._settings.save_geometry(self.saveGeometry())
-        splitter = self.centralWidget()
-        if hasattr(splitter, "saveState"):
-            self._settings.save_splitter_state(splitter.saveState())
-        super().closeEvent(event)
+        if self._tray_available and self._settings.close_to_tray:
+            # Hide to tray instead of quitting
+            event.ignore()
+            self.hide()
+        else:
+            self._settings.save_geometry(self.saveGeometry())
+            splitter = self.centralWidget()
+            if hasattr(splitter, "saveState"):
+                self._settings.save_splitter_state(splitter.saveState())
+            super().closeEvent(event)
 
     # ------------------------------------------------------------------ #
     # UI construction                                                      #
@@ -668,11 +681,16 @@ class MainWindow(QMainWindow):
         if entry is None:
             return
         path = entry.path
-        if self._settings.confirm_delete:
+        needs_confirm = (
+            self._settings.confirm_delete_folder if entry.is_dir
+            else self._settings.confirm_delete_file
+        )
+        if needs_confirm:
+            label = "folder" if entry.is_dir else "file"
             reply = QMessageBox.question(
                 self,
                 "Move to Trash",
-                f"Move to Trash:\n{path.name}",
+                f"Move {label} to Trash:\n{path.name}",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Cancel,
             )
@@ -702,7 +720,7 @@ class MainWindow(QMainWindow):
             self._lbl_zoom.setText("")
 
     def _open_settings(self) -> None:
-        dlg = SettingsDialog(self._settings, self._container.viewer, self)
+        dlg = SettingsDialog(self._settings, self._container.viewer, self, app=self._app)
         dlg.exec()
 
     def _show_about(self) -> None:

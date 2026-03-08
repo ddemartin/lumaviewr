@@ -17,6 +17,66 @@ except Exception:
     _PILLOW_AVAILABLE = False
 
 
+def _tiff_quick_preview(path: Path, max_size: int):
+    """
+    Try to return a PIL Image from a TIFF without decompressing the full file.
+
+    Strategy (in order):
+    1. Reduced-resolution subfile page (pyramidal / overview TIFF).
+       TIFF tag 254 (SUBFILETYPE) with bit 0 set marks a reduced-resolution image.
+       We pick the smallest page that is still at least ``min(max_size, 256)`` px.
+    2. EXIF IFD1 embedded JPEG thumbnail (common in camera-produced TIFFs).
+
+    Returns a PIL Image, or None if no fast path is available.
+    """
+    try:
+        with Image.open(path) as img:
+            # --- 1. Pyramidal overview pages ----------------------------------
+            n_frames = getattr(img, "n_frames", 1)
+            if n_frames > 1:
+                best_frame: int | None = None
+                best_sz = 0
+                for i in range(min(n_frames, 32)):
+                    try:
+                        img.seek(i)
+                        tag_v2 = getattr(img, "tag_v2", {})
+                        if tag_v2.get(254, 0) & 1:          # reduced-resolution flag
+                            sz = max(img.width, img.height)
+                            threshold = min(max_size, 256)
+                            if sz >= threshold and (best_frame is None or sz < best_sz):
+                                best_frame = i
+                                best_sz = sz
+                    except Exception:
+                        break
+                if best_frame is not None:
+                    img.seek(best_frame)
+                    return img.copy()
+
+            # --- 2. EXIF IFD1 thumbnail ---------------------------------------
+            img.seek(0)
+            try:
+                exif = img.getexif()
+                ifd1 = exif.get_ifd(0xFF01)          # IFD1 = thumbnail IFD in TIFF Exif
+                if not ifd1:
+                    ifd1 = exif.get_ifd(1)
+                jpeg_offset = ifd1.get(513)          # JPEGInterchangeFormat
+                jpeg_length = ifd1.get(514)          # JPEGInterchangeFormatLength
+                if jpeg_offset and jpeg_length:
+                    import io
+                    with open(path, "rb") as fh:
+                        fh.seek(jpeg_offset)
+                        data = fh.read(jpeg_length)
+                    thumb = Image.open(io.BytesIO(data))
+                    thumb.load()
+                    if max(thumb.width, thumb.height) >= min(max_size, 64):
+                        return thumb
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return None
+
+
 def _normalize_mode(img: "Image.Image") -> "Image.Image":
     """Convert img to a mode suitable for LANCZOS resampling and QImage output."""
     # Convert raw packed 16-bit modes (e.g. from TIFF plugin) before further handling
@@ -113,8 +173,18 @@ class PillowDecoder(BaseDecoder):
     def decode_preview(self, path: Path, max_size: int) -> QImage:
         if not _PILLOW_AVAILABLE:
             return QImage()
+
+        # Fast path for large TIFFs: overview pages or EXIF thumbnail
+        if path.suffix.lower() in (".tif", ".tiff"):
+            quick = _tiff_quick_preview(path, max_size)
+            if quick is not None:
+                quick = _normalize_mode(quick)
+                quick.thumbnail((max_size, max_size), Image.LANCZOS)
+                return _pil_to_qimage(quick)
+
         with Image.open(path) as img:
-            # Apply EXIF orientation BEFORE resize so dimensions are correct
+            # draft() must be called before any pixel access to take effect (JPEG sub-sampling)
+            img.draft("RGB", (max_size, max_size))
             try:
                 img = ImageOps.exif_transpose(img)
             except Exception:

@@ -1,6 +1,9 @@
 """Application settings dialog."""
 from __future__ import annotations
 
+import sys
+from typing import Optional, TYPE_CHECKING
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -9,6 +12,9 @@ from PySide6.QtWidgets import (
 )
 
 from utils.settings_manager import SettingsManager
+
+if TYPE_CHECKING:
+    from app import LumaApp
 
 _STYLE = """
 QDialog {
@@ -84,6 +90,10 @@ QPushButton#cancelBtn {
 QPushButton#cancelBtn:hover  { background: #444; color: #fff; }
 QPushButton#cancelBtn:pressed { background: #555; }
 QFrame#divider { color: #333; }
+QLabel#note {
+    color: #777;
+    font-size: 11px;
+}
 """
 
 
@@ -103,20 +113,31 @@ class SettingsDialog(QDialog):
     preview.  If the user cancels, the original color is restored.
     """
 
-    def __init__(self, settings: SettingsManager, viewer, parent=None) -> None:
+    def __init__(
+        self,
+        settings: SettingsManager,
+        viewer,
+        parent=None,
+        app: "Optional[LumaApp]" = None,
+    ) -> None:
         super().__init__(parent)
         self._settings = settings
         self._viewer = viewer
+        self._app = app
 
         # Snapshot originals so Cancel can revert
         self._orig_backdrop = QColor(settings.backdrop_color)
-        self._orig_confirm_delete = settings.confirm_delete
+        self._orig_confirm_delete_file = settings.confirm_delete_file
+        self._orig_confirm_delete_folder = settings.confirm_delete_folder
         self._orig_start_fullscreen = settings.start_fullscreen
+        self._orig_filmstrip_visible = settings.filmstrip_visible
+        self._orig_close_to_tray = settings.close_to_tray
+        self._orig_run_at_startup = settings.run_at_startup
 
         self._current_backdrop = QColor(settings.backdrop_color)
 
         self.setWindowTitle("Settings")
-        self.setFixedSize(420, 340)
+        self.setFixedSize(420, 430)
         self.setModal(True)
         self.setStyleSheet(_STYLE)
         self._build_ui()
@@ -133,6 +154,7 @@ class SettingsDialog(QDialog):
         tabs = QTabWidget()
         tabs.addTab(self._appearance_tab(), "Appearance")
         tabs.addTab(self._behavior_tab(), "Behavior")
+        tabs.addTab(self._system_tab(), "System")
         root.addWidget(tabs)
 
         root.addStretch()
@@ -199,9 +221,13 @@ class SettingsDialog(QDialog):
         hdr.setObjectName("sectionHeader")
         layout.addWidget(hdr)
 
-        self._confirm_delete_cb = QCheckBox("Ask for confirmation before deleting files")
-        self._confirm_delete_cb.setChecked(self._orig_confirm_delete)
-        layout.addWidget(self._confirm_delete_cb)
+        self._confirm_delete_file_cb = QCheckBox("Ask for confirmation before deleting files")
+        self._confirm_delete_file_cb.setChecked(self._orig_confirm_delete_file)
+        layout.addWidget(self._confirm_delete_file_cb)
+
+        self._confirm_delete_folder_cb = QCheckBox("Ask for confirmation before deleting folders")
+        self._confirm_delete_folder_cb.setChecked(self._orig_confirm_delete_folder)
+        layout.addWidget(self._confirm_delete_folder_cb)
 
         layout.addSpacing(8)
 
@@ -213,12 +239,53 @@ class SettingsDialog(QDialog):
         self._start_fullscreen_cb.setChecked(self._orig_start_fullscreen)
         layout.addWidget(self._start_fullscreen_cb)
 
+        self._filmstrip_visible_cb = QCheckBox("Show filmstrip on startup")
+        self._filmstrip_visible_cb.setChecked(self._orig_filmstrip_visible)
+        layout.addWidget(self._filmstrip_visible_cb)
+
+        layout.addStretch()
+        return tab
+
+    def _system_tab(self) -> QWidget:
+        tab = QWidget()
+        tab.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(16, 16, 16, 8)
+        layout.setSpacing(12)
+
+        hdr = QLabel("Background process")
+        hdr.setObjectName("sectionHeader")
+        layout.addWidget(hdr)
+
+        self._close_to_tray_cb = QCheckBox("Keep running in tray when closing the window")
+        self._close_to_tray_cb.setChecked(self._orig_close_to_tray)
+        self._close_to_tray_cb.toggled.connect(self._on_tray_toggled)
+        layout.addWidget(self._close_to_tray_cb)
+
+        self._run_at_startup_cb = QCheckBox("Launch Luma at Windows startup (minimised to tray)")
+        self._run_at_startup_cb.setChecked(self._orig_run_at_startup)
+        self._run_at_startup_cb.setEnabled(self._orig_close_to_tray)
+        layout.addWidget(self._run_at_startup_cb)
+
+        if sys.platform != "win32":
+            self._run_at_startup_cb.setVisible(False)
+
+        note = QLabel("When enabled, Luma stays loaded in memory so files open instantly.")
+        note.setObjectName("note")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+
         layout.addStretch()
         return tab
 
     # ------------------------------------------------------------------ #
     # Actions                                                              #
     # ------------------------------------------------------------------ #
+
+    def _on_tray_toggled(self, checked: bool) -> None:
+        self._run_at_startup_cb.setEnabled(checked)
+        if not checked:
+            self._run_at_startup_cb.setChecked(False)
 
     def _pick_color(self) -> None:
         color = QColorDialog.getColor(
@@ -233,8 +300,23 @@ class SettingsDialog(QDialog):
 
     def _on_ok(self) -> None:
         self._settings.backdrop_color = self._current_backdrop.name()
-        self._settings.confirm_delete = self._confirm_delete_cb.isChecked()
+        self._settings.confirm_delete_file = self._confirm_delete_file_cb.isChecked()
+        self._settings.confirm_delete_folder = self._confirm_delete_folder_cb.isChecked()
         self._settings.start_fullscreen = self._start_fullscreen_cb.isChecked()
+        self._settings.filmstrip_visible = self._filmstrip_visible_cb.isChecked()
+
+        new_tray = self._close_to_tray_cb.isChecked()
+        new_startup = self._run_at_startup_cb.isChecked()
+        self._settings.close_to_tray = new_tray
+        self._settings.run_at_startup = new_startup  # also writes registry
+
+        # Create or destroy the tray icon if the setting changed
+        if self._app is not None:
+            if new_tray:
+                self._app.ensure_tray()
+            else:
+                self._app.hide_tray()
+
         self.accept()
 
     def _on_cancel(self) -> None:

@@ -1,6 +1,7 @@
 """Persistent user settings stored in AppData/LumaViewer/settings.ini."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -101,12 +102,21 @@ class SettingsManager:
     # ------------------------------------------------------------------ #
 
     @property
-    def confirm_delete(self) -> bool:
-        return self._s.value("behavior/confirm_delete", True, type=bool)
+    def confirm_delete_file(self) -> bool:
+        return self._s.value("behavior/confirm_delete_file", True, type=bool)
 
-    @confirm_delete.setter
-    def confirm_delete(self, value: bool) -> None:
-        self._s.setValue("behavior/confirm_delete", value)
+    @confirm_delete_file.setter
+    def confirm_delete_file(self, value: bool) -> None:
+        self._s.setValue("behavior/confirm_delete_file", value)
+        self._s.sync()
+
+    @property
+    def confirm_delete_folder(self) -> bool:
+        return self._s.value("behavior/confirm_delete_folder", True, type=bool)
+
+    @confirm_delete_folder.setter
+    def confirm_delete_folder(self, value: bool) -> None:
+        self._s.setValue("behavior/confirm_delete_folder", value)
         self._s.sync()
 
     @property
@@ -117,6 +127,38 @@ class SettingsManager:
     def start_fullscreen(self, value: bool) -> None:
         self._s.setValue("behavior/start_fullscreen", value)
         self._s.sync()
+
+    @property
+    def filmstrip_visible(self) -> bool:
+        return self._s.value("behavior/filmstrip_visible", False, type=bool)
+
+    @filmstrip_visible.setter
+    def filmstrip_visible(self, value: bool) -> None:
+        self._s.setValue("behavior/filmstrip_visible", value)
+        self._s.sync()
+
+    # ------------------------------------------------------------------ #
+    # System / daemon                                                      #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def close_to_tray(self) -> bool:
+        return self._s.value("system/close_to_tray", False, type=bool)
+
+    @close_to_tray.setter
+    def close_to_tray(self, value: bool) -> None:
+        self._s.setValue("system/close_to_tray", value)
+        self._s.sync()
+
+    @property
+    def run_at_startup(self) -> bool:
+        return self._s.value("system/run_at_startup", False, type=bool)
+
+    @run_at_startup.setter
+    def run_at_startup(self, value: bool) -> None:
+        self._s.setValue("system/run_at_startup", value)
+        self._s.sync()
+        _apply_startup_registry(value)
 
     # ------------------------------------------------------------------ #
     # Generic helpers                                                      #
@@ -132,3 +174,33 @@ class SettingsManager:
     @property
     def file_path(self) -> str:
         return self._s.fileName()
+
+
+# --------------------------------------------------------------------------- #
+# Helpers                                                                      #
+# --------------------------------------------------------------------------- #
+
+def _apply_startup_registry(enable: bool) -> None:
+    """Add or remove the HKCU Run key so Luma starts with Windows (tray mode)."""
+    if sys.platform != "win32":
+        return
+    try:
+        import winreg
+        key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE
+        ) as key:
+            if enable:
+                # Frozen executable (PyInstaller) or dev interpreter
+                if getattr(sys, "frozen", False):
+                    exe = sys.executable
+                else:
+                    exe = f'"{sys.executable}" "{Path(__file__).parent.parent / "main.py"}"'
+                winreg.SetValueEx(key, "LumaViewer", 0, winreg.REG_SZ, f'{exe} --tray')
+            else:
+                try:
+                    winreg.DeleteValue(key, "LumaViewer")
+                except FileNotFoundError:
+                    pass
+    except Exception:
+        pass

@@ -4,13 +4,16 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QThreadPool
 from PySide6.QtWidgets import QApplication
 
 from config import config, AppConfig, ASSETS_DIR
 from utils.logging import setup_logging
+
+if TYPE_CHECKING:
+    from utils.single_instance import SingleInstance
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +26,18 @@ class LumaApp:
     - setting up logging
     - creating QApplication with correct attributes
     - applying global stylesheet
+    - wiring single-instance IPC
+    - managing the system tray icon
     - launching the main window
     """
 
-    def __init__(self, argv: list[str], app_config: Optional[AppConfig] = None) -> None:
+    def __init__(
+        self,
+        argv: list[str],
+        app_config: Optional[AppConfig] = None,
+        single_instance: "Optional[SingleInstance]" = None,
+        start_in_tray: bool = False,
+    ) -> None:
         self._cfg = app_config or config
         self._cfg.ensure_dirs()
 
@@ -37,7 +48,7 @@ class LumaApp:
         log.info("Starting Luma Viewer")
 
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
-        self._qapp = QApplication(argv)
+        self._qapp = QApplication.instance() or QApplication(argv)
         self._qapp.setApplicationName("Luma Viewer")
         self._qapp.setOrganizationName("LumaViewer")
         self._qapp.setStyle("Fusion")
@@ -45,19 +56,118 @@ class LumaApp:
         self._apply_stylesheet()
         self._apply_app_icon()
 
+        self._start_in_tray = start_in_tray
+
+        # Prevent Qt from quitting the event loop when the last window is
+        # hidden (needed for tray-only mode).
+        self._qapp.setQuitOnLastWindowClosed(False)
+
         QThreadPool.globalInstance().setMaxThreadCount(
             self._cfg.loader.thread_pool_size
         )
 
         from ui.main_window import MainWindow
         self._window = MainWindow()
+        self._window._app = self  # back-reference so Settings dialog can reach LumaApp
+
+        # ------------------------------------------------------------------ #
+        # System tray                                                          #
+        # ------------------------------------------------------------------ #
+        self._tray = None
+        self._setup_tray()
+
+        # ------------------------------------------------------------------ #
+        # Single-instance IPC                                                 #
+        # ------------------------------------------------------------------ #
+        self._si = single_instance
+        if single_instance is not None:
+            single_instance.file_open_requested.connect(self._on_ipc_open)
+
+        self._start_in_tray = start_in_tray
+
+    # ------------------------------------------------------------------ #
+    # Public                                                               #
+    # ------------------------------------------------------------------ #
 
     def run(self, open_path: Optional[Path] = None) -> int:
-        """Show the window and enter the event loop. Returns exit code."""
-        self._window.show()
+        """Show the window (or stay hidden in tray) and enter the event loop."""
+        if self._start_in_tray:
+            # Stay hidden; tray icon is already shown in _setup_tray()
+            pass
+        else:
+            self._window.show()
+
         if open_path and open_path.exists():
             self._window.open_path(open_path)
+            if self._start_in_tray:
+                self._show_window()
+
         return self._qapp.exec()
+
+    # ------------------------------------------------------------------ #
+    # Tray                                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _setup_tray(self) -> None:
+        """Create and show the tray icon if the setting is enabled or --tray was passed."""
+        from utils.settings_manager import SettingsManager
+        settings = SettingsManager()
+
+        if settings.close_to_tray or self._start_in_tray:
+            self._create_tray()
+
+    def _create_tray(self) -> None:
+        from PySide6.QtWidgets import QSystemTrayIcon
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            log.warning("System tray not available on this desktop")
+            return
+
+        from PySide6.QtGui import QIcon
+        from ui.tray_icon import TrayIcon
+
+        icon_path = ASSETS_DIR / "app" / "icon.svg"
+        icon = QIcon(str(icon_path)) if icon_path.exists() else QIcon()
+        self._tray = TrayIcon(icon, self._qapp)
+        self._tray.show_window_requested.connect(self._show_window)
+        self._tray.quit_requested.connect(self._quit)
+        self._tray.show()
+
+        # Tell the window a tray is available so closeEvent can hide instead
+        # of quitting.
+        self._window.set_tray_available(True)
+
+    def ensure_tray(self) -> None:
+        """Create the tray icon if it hasn't been created yet (called from Settings)."""
+        if self._tray is None:
+            self._create_tray()
+        elif not self._tray.isVisible():
+            self._tray.show()
+            self._window.set_tray_available(True)
+
+    def hide_tray(self) -> None:
+        """Hide and destroy the tray icon (called from Settings when disabled)."""
+        if self._tray is not None:
+            self._tray.hide()
+            self._window.set_tray_available(False)
+
+    def _show_window(self) -> None:
+        self._window.show()
+        self._window.raise_()
+        self._window.activateWindow()
+
+    def _quit(self) -> None:
+        self._window._settings.save_geometry(self._window.saveGeometry())
+        QApplication.quit()
+
+    # ------------------------------------------------------------------ #
+    # IPC                                                                  #
+    # ------------------------------------------------------------------ #
+
+    def _on_ipc_open(self, path_str: str) -> None:
+        path = Path(path_str)
+        if path.exists():
+            self._window.open_path(path)
+        self._show_window()
 
     # ------------------------------------------------------------------ #
     # Dark palette                                                         #

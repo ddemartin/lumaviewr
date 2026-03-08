@@ -11,18 +11,44 @@ if str(_ROOT) not in sys.path:
 
 
 def main() -> int:
-    from app import LumaApp
-
     argv = sys.argv[:]
     open_path: Path | None = None
+    start_in_tray = "--tray" in argv
 
-    # Accept an optional image path as first positional argument
-    if len(argv) > 1 and not argv[1].startswith("-"):
-        candidate = Path(argv.pop(1))
-        if candidate.exists():
-            open_path = candidate
+    # Extract optional image path (first positional argument)
+    filtered = []
+    for arg in argv[1:]:
+        if arg.startswith("-"):
+            filtered.append(arg)
+        elif open_path is None:
+            candidate = Path(arg)
+            if candidate.exists():
+                open_path = candidate
+            else:
+                filtered.append(arg)
+        else:
+            filtered.append(arg)
+    argv = [argv[0]] + filtered
 
-    app = LumaApp(argv)
+    # ------------------------------------------------------------------ #
+    # Single-instance check                                                #
+    # QLocalSocket needs a QApplication; create it here so app.py can     #
+    # reuse the same instance via QApplication.instance().                 #
+    # ------------------------------------------------------------------ #
+    from PySide6.QtWidgets import QApplication
+    _pre = QApplication.instance() or QApplication(sys.argv)
+
+    from utils.single_instance import SingleInstance
+    si = SingleInstance()
+    if not si.try_become_primary():
+        # Another instance is already running — hand off the path and exit.
+        if open_path:
+            si.send_to_primary(str(open_path))
+        return 0
+
+    # This is the primary instance — hand off to the full app.
+    from app import LumaApp
+    app = LumaApp(argv, single_instance=si, start_in_tray=start_in_tray)
     return app.run(open_path)
 
 
