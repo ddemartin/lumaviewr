@@ -131,13 +131,14 @@ class SettingsDialog(QDialog):
         self._orig_confirm_delete_folder = settings.confirm_delete_folder
         self._orig_start_fullscreen = settings.start_fullscreen
         self._orig_filmstrip_visible = settings.filmstrip_visible
+        self._orig_media_start_muted = settings.media_start_muted
         self._orig_close_to_tray = settings.close_to_tray
         self._orig_run_at_startup = settings.run_at_startup
 
         self._current_backdrop = QColor(settings.backdrop_color)
 
         self.setWindowTitle("Settings")
-        self.setFixedSize(420, 430)
+        self.setFixedSize(420, 470)
         self.setModal(True)
         self.setStyleSheet(_STYLE)
         self._build_ui()
@@ -243,6 +244,16 @@ class SettingsDialog(QDialog):
         self._filmstrip_visible_cb.setChecked(self._orig_filmstrip_visible)
         layout.addWidget(self._filmstrip_visible_cb)
 
+        layout.addSpacing(8)
+
+        hdr3 = QLabel("Media")
+        hdr3.setObjectName("sectionHeader")
+        layout.addWidget(hdr3)
+
+        self._media_start_muted_cb = QCheckBox("Start video and audio muted (safe for work)")
+        self._media_start_muted_cb.setChecked(self._orig_media_start_muted)
+        layout.addWidget(self._media_start_muted_cb)
+
         layout.addStretch()
         return tab
 
@@ -304,6 +315,7 @@ class SettingsDialog(QDialog):
         self._settings.confirm_delete_folder = self._confirm_delete_folder_cb.isChecked()
         self._settings.start_fullscreen = self._start_fullscreen_cb.isChecked()
         self._settings.filmstrip_visible = self._filmstrip_visible_cb.isChecked()
+        self._settings.media_start_muted = self._media_start_muted_cb.isChecked()
 
         new_tray = self._close_to_tray_cb.isChecked()
         new_startup = self._run_at_startup_cb.isChecked()

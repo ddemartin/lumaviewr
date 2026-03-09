@@ -138,6 +138,28 @@ class SettingsManager:
         self._s.sync()
 
     # ------------------------------------------------------------------ #
+    # Media                                                                #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def media_volume(self) -> int:
+        return int(self._s.value("media/volume", 80, type=int))
+
+    @media_volume.setter
+    def media_volume(self, value: int) -> None:
+        self._s.setValue("media/volume", value)
+        self._s.sync()
+
+    @property
+    def media_start_muted(self) -> bool:
+        return self._s.value("media/start_muted", False, type=bool)
+
+    @media_start_muted.setter
+    def media_start_muted(self, value: bool) -> None:
+        self._s.setValue("media/start_muted", value)
+        self._s.sync()
+
+    # ------------------------------------------------------------------ #
     # System / daemon                                                      #
     # ------------------------------------------------------------------ #
 

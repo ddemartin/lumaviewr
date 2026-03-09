@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections import deque
 from pathlib import Path
 from typing import Optional
 
@@ -14,8 +15,11 @@ from PySide6.QtWidgets import (
     QSplitter, QStackedWidget, QFileDialog, QMessageBox, QStatusBar, QLabel, QPushButton,
 )
 
+from config import config as app_config
 from core.image_loader import ImageLoader, ImageHandle
 from core.cache_manager import CacheManager
+from db.database import Database
+from db.thumbnail_store import ThumbnailStore
 from models.folder_model import FolderModel, _MEDIA_EXTENSIONS, _AUDIO_EXTENSIONS
 from ui.about_dialog import AboutDialog
 from ui.adjust_bar import AdjustBar
@@ -274,6 +278,8 @@ class MainWindow(QMainWindow):
         self._folder_model = FolderModel()
         self._cache        = CacheManager(max_ram_entries=64, max_ram_mb=512.0)
         self._loader       = ImageLoader(cache=self._cache)
+        _db                = Database(app_config.cache.db_path)
+        self._thumb_store  = ThumbnailStore(_db)
         # 1-thread pool for fast preview loading — never blocked by full-res.
         self._preview_pool = QThreadPool()
         self._preview_pool.setMaxThreadCount(1)
@@ -290,6 +296,10 @@ class MainWindow(QMainWindow):
         self._fullres_cancel: Optional["threading.Event"] = None
         self._current_handle: Optional[ImageHandle] = None
         self._thumbnails_loaded: bool = False
+        # Priority queue for thumbnail generation (managed manually).
+        self._thumb_queue:    deque[Path] = deque()
+        self._thumb_done:     set[Path]   = set()
+        self._thumb_inflight: int         = 0
         self._tray_available: bool = False
         self._crop_mode_active: bool = False
         self._adjust_mode_active: bool = False
@@ -409,6 +419,7 @@ class MainWindow(QMainWindow):
 
         # ---- centre ----
         self._container = ViewerContainer()
+        self._container.media_player.apply_settings(self._settings)
 
         # ---- splitter ----
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -515,6 +526,7 @@ class MainWindow(QMainWindow):
 
         self._grid.image_activated.connect(self.open_path)
         self._grid.folder_activated.connect(self._open_folder)
+        self._grid.scroll_changed.connect(self._reprioritize_thumbnails)
         self._nav_up_btn.clicked.connect(self._go_up)
         self._container.navigator.pan_requested.connect(self._on_navigator_pan)
         self._container.toggle_filmstrip.connect(self._toggle_filmstrip)
@@ -713,25 +725,64 @@ class MainWindow(QMainWindow):
     def _start_thumbnails_if_needed(self) -> None:
         if not self._thumbnails_loaded:
             self._thumbnails_loaded = True
+            self._thumb_queue.clear()
+            self._thumb_done.clear()
+            self._thumb_inflight = 0
             self._load_folder_thumbnails()
 
     def _load_folder_thumbnails(self) -> None:
-        """Dispatch one ThumbnailWorker per image in the current folder."""
-        for entry in self._folder_model:
-            if entry.is_dir:
+        """Build the priority queue (visible rows first) and kick off initial workers."""
+        all_paths = [
+            entry.path
+            for entry in self._folder_model
+            if not entry.is_dir
+            and entry.path.suffix.lower() not in _AUDIO_EXTENSIONS
+        ]
+        if not all_paths:
+            return
+
+        visible_set = set(self._grid.get_visible_paths())
+        priority = [p for p in all_paths if p in visible_set]
+        rest     = [p for p in all_paths if p not in visible_set]
+        self._thumb_queue = deque(priority + rest)
+
+        for _ in range(self._thumb_pool.maxThreadCount()):
+            self._dispatch_next_thumb()
+
+    def _dispatch_next_thumb(self) -> None:
+        """Pop one path from the queue and submit a worker, skipping done paths."""
+        while self._thumb_queue:
+            path = self._thumb_queue.popleft()
+            if path in self._thumb_done:
                 continue
-            if entry.path.suffix.lower() in _AUDIO_EXTENSIONS:
-                continue  # audio has no visual frame to thumbnail
-            worker = ThumbnailWorker(entry.path, self._loader, thumb_size=256)
+            self._thumb_done.add(path)
+            self._thumb_inflight += 1
+            worker = ThumbnailWorker(
+                path, self._loader, thumb_size=256, thumb_store=self._thumb_store
+            )
             worker.signals.ready.connect(self._on_thumbnail_ready)
             worker.signals.error.connect(self._on_thumbnail_error)
             self._thumb_pool.start(worker)
+            return
+
+    def _reprioritize_thumbnails(self) -> None:
+        """Move currently visible paths to the front of the pending queue."""
+        if not self._thumb_queue:
+            return
+        visible_set  = set(self._grid.get_visible_paths())
+        pending      = [p for p in self._thumb_queue if p not in visible_set]
+        front        = [p for p in self._thumb_queue if p in visible_set]
+        self._thumb_queue = deque(front + pending)
 
     def _on_thumbnail_ready(self, path: Path, image: QImage) -> None:
         self._grid.set_thumbnail(path, image)
+        self._thumb_inflight = max(0, self._thumb_inflight - 1)
+        self._dispatch_next_thumb()
 
     def _on_thumbnail_error(self, path: Path, msg: str) -> None:
         log.debug("Thumb error %s: %s", path, msg)
+        self._thumb_inflight = max(0, self._thumb_inflight - 1)
+        self._dispatch_next_thumb()
 
     # ------------------------------------------------------------------ #
     # Navigation                                                           #

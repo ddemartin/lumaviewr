@@ -4,12 +4,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import Qt, QUrl, Signal, QTimer
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy,
-    QStackedWidget, QVBoxLayout, QWidget,
+    QStackedWidget, QStyle, QVBoxLayout, QWidget,
 )
 
 log = logging.getLogger(__name__)
@@ -59,6 +59,21 @@ QLabel#volLabel {
 """
 
 
+class SeekSlider(QSlider):
+    """QSlider that jumps to the clicked position on a single left-click."""
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            val = QStyle.sliderValueFromPosition(
+                self.minimum(), self.maximum(),
+                int(event.position().x()), self.width(),
+            )
+            self.setValue(val)
+            self.sliderMoved.emit(val)
+        else:
+            super().mousePressEvent(event)
+
+
 def _fmt_time(ms: int) -> str:
     s = ms // 1000
     m, s = divmod(s, 60)
@@ -81,6 +96,11 @@ class MediaPlayer(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._settings = None   # set via apply_settings()
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(500)
+        self._save_timer.timeout.connect(self._save_volume)
 
         self._player = QMediaPlayer(self)
         self._audio = QAudioOutput(self)
@@ -112,7 +132,7 @@ class MediaPlayer(QWidget):
         for btn in (self._play_btn, self._pause_btn, self._stop_btn):
             btn.setObjectName("mediaBtn")
 
-        self._seek = QSlider(Qt.Orientation.Horizontal, self)
+        self._seek = SeekSlider(Qt.Orientation.Horizontal, self)
         self._seek.setRange(0, 0)
         self._seek.setSingleStep(1000)
         self._seek.setPageStep(5000)
@@ -155,7 +175,7 @@ class MediaPlayer(QWidget):
         self._play_btn.clicked.connect(self._player.play)
         self._pause_btn.clicked.connect(self._player.pause)
         self._stop_btn.clicked.connect(self._player.stop)
-        self._vol.valueChanged.connect(lambda v: self._audio.setVolume(v / 100.0))
+        self._vol.valueChanged.connect(self._on_volume_changed)
         self._seek.sliderMoved.connect(self._player.setPosition)
         self._player.positionChanged.connect(self._on_position)
         self._player.durationChanged.connect(self._on_duration)
@@ -168,6 +188,13 @@ class MediaPlayer(QWidget):
     # ------------------------------------------------------------------ #
     # Public API                                                           #
     # ------------------------------------------------------------------ #
+
+    def apply_settings(self, settings) -> None:
+        """Apply volume/mute preferences and connect persistent saving."""
+        self._settings = settings
+        vol = 0 if settings.media_start_muted else settings.media_volume
+        self._vol.setValue(vol)
+        self._audio.setVolume(vol / 100.0)
 
     def load(self, path: Path) -> None:
         """Load and immediately start playing *path*."""
@@ -182,6 +209,14 @@ class MediaPlayer(QWidget):
     # ------------------------------------------------------------------ #
     # Slots                                                                #
     # ------------------------------------------------------------------ #
+
+    def _on_volume_changed(self, v: int) -> None:
+        self._audio.setVolume(v / 100.0)
+        self._save_timer.start()
+
+    def _save_volume(self) -> None:
+        if self._settings is not None:
+            self._settings.media_volume = self._vol.value()
 
     def _on_position(self, pos: int) -> None:
         self._seek.blockSignals(True)

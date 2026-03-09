@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import (
-    Qt, QAbstractListModel, QModelIndex, QSize, QRect, Signal, QTimer,
+    Qt, QAbstractListModel, QModelIndex, QSize, QRect, Signal, QTimer, QPoint,
 )
 from PySide6.QtGui import QImage, QColor, QPainter, QFont
 from PySide6.QtWidgets import (
@@ -139,6 +139,7 @@ class GridView(QListView):
 
     image_activated  = Signal(Path)
     folder_activated = Signal(Path)
+    scroll_changed   = Signal()   # emitted (debounced) when scroll position changes
 
     def __init__(
         self,
@@ -158,6 +159,12 @@ class GridView(QListView):
         self.setStyleSheet("background: #1e1e1e; border: none;")
         # Single-click OR keyboard navigation triggers the image
         self.selectionModel().currentChanged.connect(self._on_current_changed)
+        # Debounced scroll → scroll_changed
+        self._scroll_timer = QTimer(self)
+        self._scroll_timer.setSingleShot(True)
+        self._scroll_timer.setInterval(150)
+        self._scroll_timer.timeout.connect(self.scroll_changed)
+        self.verticalScrollBar().valueChanged.connect(self._scroll_timer.start)
 
     def refresh(self) -> None:
         self._suppress_selection = True
@@ -169,6 +176,24 @@ class GridView(QListView):
 
     def set_thumbnail(self, path: Path, image: QImage) -> None:
         self._thumb_model.set_thumbnail(path, image)
+
+    def get_visible_paths(self) -> list[Path]:
+        """Return paths of image entries currently visible in the viewport."""
+        vp = self.viewport().rect()
+        tl = self.indexAt(vp.topLeft() + QPoint(1, 1))
+        br = self.indexAt(vp.bottomRight() - QPoint(1, 1))
+        first = tl.row() if tl.isValid() else 0
+        last  = br.row() if br.isValid() else self._thumb_model.rowCount() - 1
+        # Clamp and include a small buffer row above/below
+        first = max(0, first - 1)
+        last  = min(self._thumb_model.rowCount() - 1, last + 1)
+        paths = []
+        for row in range(first, last + 1):
+            idx   = self._thumb_model.index(row)
+            entry = self._thumb_model.data(idx, Qt.ItemDataRole.UserRole)
+            if entry and not entry.is_dir:
+                paths.append(entry.path)
+        return paths
 
     def select_path(self, path: Path) -> None:
         """Select an item programmatically without triggering image_activated."""

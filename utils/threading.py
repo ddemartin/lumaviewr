@@ -151,19 +151,36 @@ class ThumbnailSignals(QObject):
 class ThumbnailWorker(QRunnable):
     """Generates a thumbnail for one image path."""
 
-    def __init__(self, path: Path, loader: "Any", thumb_size: int = 256) -> None:
+    def __init__(
+        self,
+        path: Path,
+        loader: "Any",
+        thumb_size: int = 256,
+        thumb_store: "Any" = None,
+    ) -> None:
         super().__init__()
-        self._path       = path
-        self._loader     = loader
-        self._thumb_size = thumb_size
-        self.signals     = ThumbnailSignals()
+        self._path        = path
+        self._loader      = loader
+        self._thumb_size  = thumb_size
+        self._thumb_store = thumb_store
+        self.signals      = ThumbnailSignals()
         self.setAutoDelete(True)
 
     @Slot()
     def run(self) -> None:
         try:
+            if self._thumb_store is not None:
+                cached = self._thumb_store.get(self._path)
+                if cached is not None:
+                    self.signals.ready.emit(self._path, cached)
+                    return
             decoder = self._loader._select_decoder(self._path)
             thumb   = decoder.decode_preview(self._path, self._thumb_size)
+            if self._thumb_store is not None:
+                try:
+                    self._thumb_store.put(self._path, thumb)
+                except Exception:
+                    pass
             self.signals.ready.emit(self._path, thumb)
         except RuntimeError:
             pass
