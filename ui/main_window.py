@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 
 from core.image_loader import ImageLoader, ImageHandle
 from core.cache_manager import CacheManager
-from models.folder_model import FolderModel, _MEDIA_EXTENSIONS
+from models.folder_model import FolderModel, _MEDIA_EXTENSIONS, _AUDIO_EXTENSIONS
 from ui.about_dialog import AboutDialog
 from ui.adjust_bar import AdjustBar
 from ui.crop_bar import CropBar
@@ -707,8 +707,8 @@ class MainWindow(QMainWindow):
         for entry in self._folder_model:
             if entry.is_dir:
                 continue
-            if entry.path.suffix.lower() in _MEDIA_EXTENSIONS:
-                continue  # decoders cannot produce thumbnails for media files
+            if entry.path.suffix.lower() in _AUDIO_EXTENSIONS:
+                continue  # audio has no visual frame to thumbnail
             worker = ThumbnailWorker(entry.path, self._loader, thumb_size=256)
             worker.signals.ready.connect(self._on_thumbnail_ready)
             worker.signals.error.connect(self._on_thumbnail_error)
