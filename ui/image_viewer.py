@@ -135,8 +135,21 @@ class ImageViewer(QWidget):
     # ------------------------------------------------------------------ #
 
     def set_preview(self, image: QImage) -> None:
-        """Swap the displayed image without touching zoom/pan (live preview use)."""
+        """Swap the displayed image for live preview, preserving the visual zoom/pan state.
+
+        Handles the case where the new image has different dimensions from the current one
+        (e.g. full-res arrived via refine_image while adjust mode was already active).
+        """
+        if (not self._fit_mode
+                and self._image is not None
+                and not self._image.isNull()
+                and image.width() > 0
+                and image.width() != self._image.width()):
+            # Compensate so the rendered pixel size on screen stays the same
+            self._base_scale_fit *= self._image.width() / image.width()
         self._image = image
+        if self._fit_mode:
+            self._recompute_fit()
         self.update()
 
     def set_crop_mode(self, enabled: bool) -> None:
