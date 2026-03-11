@@ -7,16 +7,16 @@ from collections import deque
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Qt, QObject, QRect, QRunnable, QThreadPool, QPoint, QTimer, Signal, QEvent, Slot
+from PySide6.QtCore import Qt, QObject, QRect, QRunnable, QThreadPool, QPoint, QSize, QTimer, Signal, QEvent, Slot
 from PySide6.QtCore import QFile, QFileSystemWatcher
-from PySide6.QtGui import QAction, QColor, QImage, QKeySequence, QMouseEvent, QMovie
+from PySide6.QtGui import QAction, QColor, QIcon, QImage, QKeySequence, QMouseEvent, QMovie
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+    QMainWindow, QMenu, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QStackedWidget, QFileDialog, QMessageBox, QStatusBar, QLabel, QPushButton,
-    QLineEdit,
+    QLineEdit, QToolBar, QToolButton,
 )
 
-from config import config as app_config
+from config import config as app_config, ASSETS_DIR
 from core.image_loader import ImageLoader, ImageHandle
 from core.cache_manager import CacheManager
 from db.database import Database
@@ -729,6 +729,7 @@ class MainWindow(QMainWindow):
         self.resize(1280, 800)
         self._build_ui()
         self._build_menus()
+        self._build_toolbar()
         self._connect_signals()
         self._restore_session()
 
@@ -946,41 +947,41 @@ class MainWindow(QMainWindow):
 
         # File
         file_menu = mb.addMenu("&File")
-        open_act = QAction("&Open…", self)
-        open_act.setShortcut(QKeySequence.StandardKey.Open)
-        open_act.triggered.connect(self.open_file_dialog)
-        file_menu.addAction(open_act)
-        open_folder_act = QAction("Open &Folder…", self)
-        open_folder_act.setShortcut(QKeySequence("Ctrl+Shift+O"))
-        open_folder_act.triggered.connect(self.open_folder_dialog)
-        file_menu.addAction(open_folder_act)
+        self._open_act = QAction("&Open…", self)
+        self._open_act.setShortcut(QKeySequence.StandardKey.Open)
+        self._open_act.triggered.connect(self.open_file_dialog)
+        file_menu.addAction(self._open_act)
+        self._open_folder_act = QAction("Open &Folder…", self)
+        self._open_folder_act.setShortcut(QKeySequence("Ctrl+Shift+O"))
+        self._open_folder_act.triggered.connect(self.open_folder_dialog)
+        file_menu.addAction(self._open_folder_act)
         file_menu.addSeparator()
-        quit_act = QAction("&Quit", self)
-        quit_act.setShortcut(QKeySequence("Ctrl+Q"))
-        quit_act.triggered.connect(self.close)
-        file_menu.addAction(quit_act)
+        self._quit_act = QAction("&Quit", self)
+        self._quit_act.setShortcut(QKeySequence("Ctrl+Q"))
+        self._quit_act.triggered.connect(self.close)
+        file_menu.addAction(self._quit_act)
 
         # View
         view_menu = mb.addMenu("&View")
-        fit_act = QAction("&Fit to Window", self)
-        fit_act.setShortcut(QKeySequence("F"))
-        fit_act.triggered.connect(self._container.viewer.set_fit_mode)
-        view_menu.addAction(fit_act)
+        self._fit_act = QAction("&Fit to Window", self)
+        self._fit_act.setShortcut(QKeySequence("F"))
+        self._fit_act.triggered.connect(self._container.viewer.set_fit_mode)
+        view_menu.addAction(self._fit_act)
 
-        one_act = QAction("&Actual Size (1:1)", self)
-        one_act.setShortcut(QKeySequence("1"))
-        one_act.triggered.connect(self._container.viewer.set_one_to_one)
-        view_menu.addAction(one_act)
+        self._one_act = QAction("&Actual Size (1:1)", self)
+        self._one_act.setShortcut(QKeySequence("1"))
+        self._one_act.triggered.connect(self._container.viewer.set_one_to_one)
+        view_menu.addAction(self._one_act)
 
-        full_act = QAction("&Fullscreen", self)
-        full_act.setShortcut(QKeySequence("F11"))
-        full_act.triggered.connect(self._toggle_fullscreen)
-        view_menu.addAction(full_act)
+        self._full_act = QAction("&Fullscreen", self)
+        self._full_act.setShortcut(QKeySequence("F11"))
+        self._full_act.triggered.connect(self._toggle_fullscreen)
+        view_menu.addAction(self._full_act)
 
-        slideshow_act = QAction("S&lideshow", self)
-        slideshow_act.setShortcut(QKeySequence("F5"))
-        slideshow_act.triggered.connect(self._enter_slideshow)
-        view_menu.addAction(slideshow_act)
+        self._slideshow_act = QAction("S&lideshow", self)
+        self._slideshow_act.setShortcut(QKeySequence("F5"))
+        self._slideshow_act.triggered.connect(self._enter_slideshow)
+        view_menu.addAction(self._slideshow_act)
 
         view_menu.addSeparator()
         self._stretch_act = QAction("&Stretch Small Images", self)
@@ -995,10 +996,10 @@ class MainWindow(QMainWindow):
         self._meta_panel_act.toggled.connect(self._on_metadata_panel_toggled)
         view_menu.addAction(self._meta_panel_act)
 
-        search_act = QAction("&Search…", self)
-        search_act.setShortcut(QKeySequence("Ctrl+F"))
-        search_act.triggered.connect(self._toggle_search_bar)
-        view_menu.addAction(search_act)
+        self._search_act = QAction("&Search…", self)
+        self._search_act.setShortcut(QKeySequence("Ctrl+F"))
+        self._search_act.triggered.connect(self._toggle_search_bar)
+        view_menu.addAction(self._search_act)
 
         # Edit
         edit_menu = mb.addMenu("&Edit")
@@ -1028,21 +1029,120 @@ class MainWindow(QMainWindow):
         self._act_resize.triggered.connect(self._enter_resize_mode)
         edit_menu.addAction(self._act_resize)
         edit_menu.addSeparator()
-        rename_act = QAction("Re&name", self)
-        rename_act.setShortcut(QKeySequence("F2"))
-        rename_act.triggered.connect(self._start_rename)
-        edit_menu.addAction(rename_act)
+        self._rename_act = QAction("Re&name", self)
+        self._rename_act.setShortcut(QKeySequence("F2"))
+        self._rename_act.triggered.connect(self._start_rename)
+        edit_menu.addAction(self._rename_act)
         edit_menu.addSeparator()
-        settings_act = QAction("&Settings…", self)
-        settings_act.setShortcut(QKeySequence("Ctrl+,"))
-        settings_act.triggered.connect(self._open_settings)
-        edit_menu.addAction(settings_act)
+        self._settings_act = QAction("&Settings…", self)
+        self._settings_act.setShortcut(QKeySequence("Ctrl+,"))
+        self._settings_act.triggered.connect(self._open_settings)
+        edit_menu.addAction(self._settings_act)
 
         # Help
         help_menu = mb.addMenu("&Help")
-        about_act = QAction("&About Luma…", self)
-        about_act.triggered.connect(self._show_about)
-        help_menu.addAction(about_act)
+        self._about_act = QAction("&About Luma…", self)
+        self._about_act.triggered.connect(self._show_about)
+        help_menu.addAction(self._about_act)
+
+        self.menuBar().hide()
+
+    def _build_toolbar(self) -> None:
+        overlay_dir = ASSETS_DIR / "icons" / "overlay"
+        tb_dir      = ASSETS_DIR / "icons" / "toolbar"
+
+        def _icon(path) -> QIcon:
+            return QIcon(str(path)) if path.exists() else QIcon()
+
+        tb = QToolBar("Main Toolbar", self)
+        tb.setMovable(False)
+        tb.setFloatable(False)
+        tb.setIconSize(QSize(18, 18))
+        tb.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, tb)
+        self._toolbar = tb
+
+        # --- File ---
+        self._open_act.setIcon(_icon(tb_dir / "open_file.svg"))
+        self._open_act.setToolTip("Open File  (Ctrl+O)")
+        tb.addAction(self._open_act)
+
+        self._open_folder_act.setIcon(_icon(tb_dir / "open_folder.svg"))
+        self._open_folder_act.setToolTip("Open Folder  (Ctrl+Shift+O)")
+        tb.addAction(self._open_folder_act)
+
+        tb.addSeparator()
+
+        # --- View ---
+        self._fit_act.setIcon(_icon(overlay_dir / "fit.svg"))
+        self._fit_act.setToolTip("Fit to Window  (F)")
+        tb.addAction(self._fit_act)
+
+        self._one_act.setIcon(_icon(tb_dir / "actual_size.svg"))
+        self._one_act.setToolTip("Actual Size 1:1  (1)")
+        tb.addAction(self._one_act)
+
+        self._full_act.setIcon(_icon(overlay_dir / "fullscreen.svg"))
+        self._full_act.setToolTip("Fullscreen  (F11)")
+        tb.addAction(self._full_act)
+
+        tb.addSeparator()
+
+        # --- Edit (enable/disable synced automatically via QAction) ---
+        self._act_crop.setIcon(_icon(tb_dir / "crop.svg"))
+        self._act_crop.setToolTip("Crop  (C)")
+        tb.addAction(self._act_crop)
+
+        self._act_adjust.setIcon(_icon(tb_dir / "adjust.svg"))
+        self._act_adjust.setToolTip("Adjust  (A)")
+        tb.addAction(self._act_adjust)
+
+        self._act_rotate.setIcon(_icon(tb_dir / "rotate.svg"))
+        self._act_rotate.setToolTip("Rotate  (R)")
+        tb.addAction(self._act_rotate)
+
+        self._act_flip.setIcon(_icon(tb_dir / "flip.svg"))
+        self._act_flip.setToolTip("Flip  (L)")
+        tb.addAction(self._act_flip)
+
+        self._act_resize.setIcon(_icon(tb_dir / "resize.svg"))
+        self._act_resize.setToolTip("Resize  (Z)")
+        tb.addAction(self._act_resize)
+
+        tb.addSeparator()
+
+        # --- Extra ---
+        self._search_act.setIcon(_icon(tb_dir / "search.svg"))
+        self._search_act.setToolTip("Search  (Ctrl+F)")
+        tb.addAction(self._search_act)
+
+        self._slideshow_act.setIcon(_icon(tb_dir / "slideshow.svg"))
+        self._slideshow_act.setToolTip("Slideshow  (F5)")
+        tb.addAction(self._slideshow_act)
+
+        self._meta_panel_act.setIcon(_icon(tb_dir / "metadata.svg"))
+        self._meta_panel_act.setToolTip("Metadata Panel  (Ctrl+I)")
+        tb.addAction(self._meta_panel_act)
+
+        tb.addSeparator()
+
+        # --- More (overflow) ---
+        more_btn = QToolButton(tb)
+        more_btn.setIcon(_icon(tb_dir / "more.svg"))
+        more_btn.setToolTip("More")
+        more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        more_menu = QMenu(more_btn)
+        more_menu.addAction(self._rename_act)
+        more_menu.addSeparator()
+        more_menu.addAction(self._stretch_act)
+        more_menu.addSeparator()
+        more_menu.addAction(self._settings_act)
+        more_menu.addSeparator()
+        more_menu.addAction(self._about_act)
+        more_menu.addSeparator()
+        more_menu.addAction(self._quit_act)
+        more_btn.setMenu(more_menu)
+        tb.addWidget(more_btn)
 
     def _connect_signals(self) -> None:
         overlay = self._container.overlay

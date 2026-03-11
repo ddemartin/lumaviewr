@@ -314,6 +314,39 @@ class LumaApp:
                 background: #2a82da;
                 color: #fff;
             }
+            QToolBar {
+                background: #242424;
+                border-bottom: 1px solid #3a3a3a;
+                spacing: 1px;
+                padding: 2px 4px;
+            }
+            QToolBar::separator {
+                background: #444;
+                width: 1px;
+                margin: 4px 3px;
+            }
+            QToolBar QToolButton {
+                background: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                color: #d8d8d8;
+            }
+            QToolBar QToolButton:hover {
+                background: rgba(255, 255, 255, 0.10);
+            }
+            QToolBar QToolButton:pressed {
+                background: rgba(255, 255, 255, 0.18);
+            }
+            QToolBar QToolButton:checked {
+                background: rgba(42, 130, 218, 0.35);
+            }
+            QToolBar QToolButton:disabled {
+                opacity: 0.35;
+            }
+            QToolBar QToolButton[popupMode="2"] {
+                padding-right: 6px;
+            }
             QStatusBar {
                 background: #272727;
                 color: #b0b0b0;
@@ -385,6 +418,39 @@ class LumaApp:
             QMenu::item:selected {
                 background: #2a82da;
                 color: #fff;
+            }
+            QToolBar {
+                background: #383838;
+                border-bottom: 1px solid #2a2a2a;
+                spacing: 1px;
+                padding: 2px 4px;
+            }
+            QToolBar::separator {
+                background: #555;
+                width: 1px;
+                margin: 4px 3px;
+            }
+            QToolBar QToolButton {
+                background: transparent;
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+                color: #e8e8e8;
+            }
+            QToolBar QToolButton:hover {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            QToolBar QToolButton:pressed {
+                background: rgba(255, 255, 255, 0.22);
+            }
+            QToolBar QToolButton:checked {
+                background: rgba(42, 130, 218, 0.45);
+            }
+            QToolBar QToolButton:disabled {
+                opacity: 0.35;
+            }
+            QToolBar QToolButton[popupMode="2"] {
+                padding-right: 6px;
             }
             QStatusBar {
                 background: #e8e8e8;
