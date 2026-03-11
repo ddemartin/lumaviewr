@@ -98,14 +98,20 @@ class RawDecoder(BaseDecoder):
         """Full sensor-resolution demosaic (no half_size, no downscale)."""
         if not _RAWPY_AVAILABLE:
             return QImage()
-        with rawpy.imread(str(path)) as raw:
-            rgb = raw.postprocess(use_camera_wb=True, output_bps=8)
+        try:
+            with rawpy.imread(str(path)) as raw:
+                rgb = raw.postprocess(use_camera_wb=True, output_bps=8)
+        except Exception:
+            return QImage()
         return _rgb_array_to_qimage(rgb)
 
     def decode_region(self, path: Path, region: Region, scale: float) -> QImage:
         """Decode full image and crop — libraw does not support true ROI."""
-        with rawpy.imread(str(path)) as raw:
-            rgb = raw.postprocess(use_camera_wb=True, output_bps=8)
+        try:
+            with rawpy.imread(str(path)) as raw:
+                rgb = raw.postprocess(use_camera_wb=True, output_bps=8)
+        except Exception:
+            return QImage()
         from PIL import Image
         pil = Image.fromarray(rgb)
         box = (region.x, region.y, region.x + region.width, region.y + region.height)

@@ -73,16 +73,20 @@ def _apply_stretch_gpu(arr_np: np.ndarray, lo_pct: float, hi_pct: float) -> np.n
     arr = _cp.asarray(arr_np, dtype=_cp.float32)
     finite = arr[_cp.isfinite(arr)]
     if finite.size == 0:
+        del arr, finite
         return np.zeros(arr_np.shape, dtype=np.uint8)
 
     vmin = float(_cp.percentile(finite, lo_pct))
     vmax = float(_cp.percentile(finite, hi_pct))
+    del finite
     if vmax <= vmin:
         vmax = vmin + 1.0
 
-    out = _cp.clip(arr, vmin, vmax)
-    out = (out - vmin) / (vmax - vmin) * 255.0
-    result = _cp.asnumpy(out.astype(_cp.uint8))
+    _cp.clip(arr, vmin, vmax, out=arr)
+    arr -= vmin
+    arr *= 255.0 / (vmax - vmin)
+    result = _cp.asnumpy(arr.astype(_cp.uint8))
+    del arr
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     if not _gpu_stretch_logged:
@@ -131,12 +135,14 @@ def apply_auto_stretch(
 
     vmin = float(np.percentile(finite, lo_pct))
     vmax = float(np.percentile(finite, hi_pct))
+    del finite
     if vmax <= vmin:
         vmax = vmin + 1.0
 
-    out = np.clip(arr, vmin, vmax)
-    out = (out - vmin) / (vmax - vmin) * 255.0
-    return out.astype(np.uint8)
+    np.clip(arr, vmin, vmax, out=arr)
+    arr -= vmin
+    arr *= 255.0 / (vmax - vmin)
+    return arr.astype(np.uint8)
 
 
 # ------------------------------------------------------------------ #
@@ -197,7 +203,7 @@ def _resize_raw(data: np.ndarray, max_size: int) -> np.ndarray:
     if scale >= 1.0:
         return squeezed
     nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
-    pil = Image.fromarray(squeezed.astype(np.float32), mode="F")
+    pil = Image.fromarray(np.asarray(squeezed, dtype=np.float32), mode="F")
     return np.array(pil.resize((nw, nh), Image.LANCZOS))
 
 

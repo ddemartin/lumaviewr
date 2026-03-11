@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 
 # Resolved once at first use; empty string means "not found"
 _FFMPEG: str | None = None
+_WIN32 = sys.platform == "win32"
 
 
 def _ffmpeg_bin() -> str | None:
@@ -75,7 +77,8 @@ def _extract_frame(path: Path, max_size: int, seek: str | None = "00:00:01") -> 
             "-q:v", "3",
             "-y", tmp.name,
         ]
-        r = subprocess.run(cmd, capture_output=True, timeout=5)
+        flags = subprocess.CREATE_NO_WINDOW if _WIN32 else 0
+        r = subprocess.run(cmd, capture_output=True, timeout=5, creationflags=flags)
         if r.returncode == 0:
             img = QImage(tmp.name)
             if not img.isNull():

@@ -252,10 +252,10 @@ def _apply_startup_registry(enable: bool) -> None:
             if enable:
                 # Frozen executable (PyInstaller) or dev interpreter
                 if getattr(sys, "frozen", False):
-                    exe = sys.executable
+                    cmd = f'"{sys.executable}" --tray'
                 else:
-                    exe = f'"{sys.executable}" "{Path(__file__).parent.parent / "main.py"}"'
-                winreg.SetValueEx(key, "LumaViewer", 0, winreg.REG_SZ, f'{exe} --tray')
+                    cmd = f'"{sys.executable}" "{Path(__file__).parent.parent / "main.py"}" --tray'
+                winreg.SetValueEx(key, "LumaViewer", 0, winreg.REG_SZ, cmd)
             else:
                 try:
                     winreg.DeleteValue(key, "LumaViewer")

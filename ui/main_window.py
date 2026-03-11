@@ -805,6 +805,8 @@ class MainWindow(QMainWindow):
         self._adjust_timer.stop()
         self._search_timer.stop()
         self._search_refresh_timer.stop()
+        self._watcher_timer.stop()
+        self._slideshow_timer.stop()
         if self._fullres_cancel is not None:
             self._fullres_cancel.set()
         self._cancel_meta_scan()
@@ -1263,7 +1265,7 @@ class MainWindow(QMainWindow):
     # Image loading                                                        #
     # ------------------------------------------------------------------ #
 
-    def _load_current(self) -> None:
+    def _exit_all_edit_modes(self) -> None:
         if self._crop_mode_active:
             self._exit_crop_mode()
         if self._adjust_mode_active:
@@ -1274,6 +1276,9 @@ class MainWindow(QMainWindow):
             self._exit_flip_mode()
         if self._resize_mode_active:
             self._exit_resize_mode()
+
+    def _load_current(self) -> None:
+        self._exit_all_edit_modes()
         entry = self._folder_model.current
         if entry is None:
             return
@@ -1669,8 +1674,7 @@ class MainWindow(QMainWindow):
         text = self._search_edit.text().strip()
         if not text:
             return
-        self._cancel_meta_scan()
-        self._search_seq += 1
+        self._cancel_meta_scan()  # also increments _search_seq
         stop = threading.Event()
         self._search_stop = stop
         worker = _MetaScanWorker(self._folder_model, self._loader, self._search_seq, stop)
@@ -1740,17 +1744,7 @@ class MainWindow(QMainWindow):
             return
         if self._folder_model.current is None:
             return
-        # Exit any active edit mode before starting slideshow
-        if self._crop_mode_active:
-            self._exit_crop_mode()
-        if self._adjust_mode_active:
-            self._exit_adjust_mode()
-        if self._rotate_mode_active:
-            self._exit_rotate_mode()
-        if self._flip_mode_active:
-            self._exit_flip_mode()
-        if self._resize_mode_active:
-            self._exit_resize_mode()
+        self._exit_all_edit_modes()
         self._slideshow_active = True
         self._slideshow_playing = False
         bar = self._container.slideshow_bar
@@ -2012,6 +2006,8 @@ class MainWindow(QMainWindow):
         self._save_crop(self._current_handle.path, rect, invalidate=True)
 
     def _save_crop(self, dest: Path, rect: QRect, *, invalidate: bool = False) -> None:
+        if self._current_handle is None:
+            return
         from PIL import Image
         try:
             src = self._current_handle.path
@@ -2134,6 +2130,8 @@ class MainWindow(QMainWindow):
         self._save_adjusted(self._current_handle.path, invalidate=True)
 
     def _save_adjusted(self, dest: Path, *, invalidate: bool = False) -> None:
+        if self._current_handle is None:
+            return
         from PIL import Image
         try:
             src    = self._current_handle.path
@@ -2246,6 +2244,8 @@ class MainWindow(QMainWindow):
         self._save_rotated(self._current_handle.path, invalidate=True)
 
     def _save_rotated(self, dest: Path, *, invalidate: bool = False) -> None:
+        if self._current_handle is None:
+            return
         from PIL import Image
         rotation = self._container.viewer.get_rotation()
         if rotation == 0:
@@ -2380,6 +2380,8 @@ class MainWindow(QMainWindow):
         self._save_flipped(self._current_handle.path, invalidate=True)
 
     def _save_flipped(self, dest: Path, *, invalidate: bool = False) -> None:
+        if self._current_handle is None:
+            return
         from PIL import Image, ImageOps
         bar    = self._container.flip_bar
         flip_h = bar.flip_h
@@ -2520,6 +2522,8 @@ class MainWindow(QMainWindow):
             self._do_resize_single(self._current_handle.path, params, invalidate=True)
 
     def _do_resize_single(self, dest: Path, params: dict, *, invalidate: bool) -> None:
+        if self._current_handle is None:
+            return
         from PIL import Image
         src = self._current_handle.path
         try:
