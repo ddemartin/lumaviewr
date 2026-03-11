@@ -52,8 +52,10 @@ class LumaApp:
         self._qapp.setApplicationName("Luma Viewer")
         self._qapp.setOrganizationName("LumaViewer")
         self._qapp.setStyle("Fusion")
-        self._apply_dark_palette()
-        self._apply_stylesheet()
+
+        from utils.settings_manager import SettingsManager as _SM
+        _saved_theme = _SM().theme
+        self.apply_theme(_saved_theme)  # palette + stylesheet (no window yet)
         self._apply_app_icon()
 
         self._start_in_tray = start_in_tray
@@ -69,6 +71,8 @@ class LumaApp:
         from ui.main_window import MainWindow
         self._window = MainWindow()
         self._window._app = self  # back-reference so Settings dialog can reach LumaApp
+        # Apply theme to window widgets (GridView, MetadataPanel, etc.) now that they exist
+        self._window.apply_theme(_saved_theme)
 
         # ------------------------------------------------------------------ #
         # System tray                                                          #
@@ -174,8 +178,19 @@ class LumaApp:
         self._show_window()
 
     # ------------------------------------------------------------------ #
-    # Dark palette                                                         #
+    # Theme                                                                #
     # ------------------------------------------------------------------ #
+
+    def apply_theme(self, theme: str) -> None:
+        """Apply 'dark' or 'light' theme to the entire application."""
+        if theme == "light":
+            self._apply_light_palette()
+            self._apply_light_stylesheet()
+        else:
+            self._apply_dark_palette()
+            self._apply_dark_stylesheet()
+        if hasattr(self, "_window"):
+            self._window.apply_theme(theme)
 
     def _apply_app_icon(self) -> None:
         from PySide6.QtGui import QIcon
@@ -188,7 +203,6 @@ class LumaApp:
         palette = QPalette()
         dark   = QColor(30,  30,  30)
         mid    = QColor(53,  53,  53)
-        light  = QColor(80,  80,  80)
         text   = QColor(220, 220, 220)
         bright = QColor(42, 130, 218)
         link   = QColor(100, 160, 230)
@@ -208,7 +222,34 @@ class LumaApp:
         palette.setColor(QPalette.ColorRole.HighlightedText, QColor(0, 0, 0))
         self._qapp.setPalette(palette)
 
-    def _apply_stylesheet(self) -> None:
+    def _apply_light_palette(self) -> None:
+        from PySide6.QtGui import QPalette, QColor
+        palette = QPalette()
+        window  = QColor(240, 240, 240)
+        base    = QColor(255, 255, 255)
+        altbase = QColor(245, 245, 245)
+        text    = QColor(30,  30,  30)
+        mid     = QColor(210, 210, 210)
+        tooltip_bg = QColor(255, 255, 220)
+        bright  = QColor(42, 130, 218)
+        link    = QColor(0, 100, 200)
+
+        palette.setColor(QPalette.ColorRole.Window,          window)
+        palette.setColor(QPalette.ColorRole.WindowText,      text)
+        palette.setColor(QPalette.ColorRole.Base,            base)
+        palette.setColor(QPalette.ColorRole.AlternateBase,   altbase)
+        palette.setColor(QPalette.ColorRole.ToolTipBase,     tooltip_bg)
+        palette.setColor(QPalette.ColorRole.ToolTipText,     text)
+        palette.setColor(QPalette.ColorRole.Text,            text)
+        palette.setColor(QPalette.ColorRole.Button,          mid)
+        palette.setColor(QPalette.ColorRole.ButtonText,      text)
+        palette.setColor(QPalette.ColorRole.BrightText,      QColor(200, 0, 0))
+        palette.setColor(QPalette.ColorRole.Link,            link)
+        palette.setColor(QPalette.ColorRole.Highlight,       bright)
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+        self._qapp.setPalette(palette)
+
+    def _apply_dark_stylesheet(self) -> None:
         self._qapp.setStyleSheet("""
             QToolTip {
                 color: #e8e8e8;
@@ -277,5 +318,77 @@ class LumaApp:
                 background: #272727;
                 color: #b0b0b0;
                 border-top: 1px solid #3a3a3a;
+            }
+        """)
+
+    def _apply_light_stylesheet(self) -> None:
+        self._qapp.setStyleSheet("""
+            QToolTip {
+                color: #1a1a1a;
+                background-color: #ffffc8;
+                border: 1px solid #aaa;
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+            }
+            QSplitter::handle {
+                background: #ccc;
+            }
+            QSplitter::handle:hover {
+                background: #2a82da;
+            }
+            QScrollBar:vertical {
+                background: #e8e8e8;
+                width: 10px;
+                border: none;
+            }
+            QScrollBar::handle:vertical {
+                background: #b0b0b0;
+                border-radius: 4px;
+                min-height: 24px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #888;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0;
+            }
+            QScrollBar:horizontal {
+                background: #e8e8e8;
+                height: 10px;
+                border: none;
+            }
+            QScrollBar::handle:horizontal {
+                background: #b0b0b0;
+                border-radius: 4px;
+                min-width: 24px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: #888;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0;
+            }
+            QMenuBar {
+                background: #f0f0f0;
+                color: #1a1a1a;
+                border-bottom: 1px solid #ccc;
+            }
+            QMenuBar::item:selected {
+                background: #ddd;
+            }
+            QMenu {
+                background: #f8f8f8;
+                color: #1a1a1a;
+                border: 1px solid #bbb;
+            }
+            QMenu::item:selected {
+                background: #2a82da;
+                color: #fff;
+            }
+            QStatusBar {
+                background: #e8e8e8;
+                color: #444;
+                border-top: 1px solid #ccc;
             }
         """)

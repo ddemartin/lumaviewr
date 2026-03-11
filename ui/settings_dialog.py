@@ -7,7 +7,7 @@ from typing import Optional, TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QCheckBox, QColorDialog, QDialog, QFrame, QHBoxLayout,
+    QCheckBox, QColorDialog, QComboBox, QDialog, QFrame, QHBoxLayout,
     QLabel, QPushButton, QTabWidget, QVBoxLayout, QWidget,
 )
 
@@ -16,91 +16,102 @@ from utils.settings_manager import SettingsManager
 if TYPE_CHECKING:
     from app import LumaApp
 
-_STYLE = """
-QDialog {
-    background: #1e1e1e;
-}
-QTabWidget::pane {
-    border: 1px solid #333;
-    background: #252525;
-}
+def _make_style(theme: str) -> str:
+    if theme == "light":
+        return """
+QDialog { background: #f0f0f0; }
+QTabWidget::pane { border: 1px solid #ccc; background: #fafafa; }
 QTabBar::tab {
-    background: #2a2a2a;
-    color: #aaa;
-    padding: 6px 18px;
-    border: 1px solid #333;
-    border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    background: #e0e0e0; color: #555;
+    padding: 6px 18px; border: 1px solid #ccc;
+    border-bottom: none; border-radius: 4px 4px 0 0;
 }
-QTabBar::tab:selected {
-    background: #252525;
-    color: #fff;
-}
-QTabBar::tab:hover:!selected {
-    background: #333;
-    color: #ccc;
-}
-QLabel {
-    color: #ccc;
-    background: transparent;
-}
+QTabBar::tab:selected  { background: #fafafa; color: #111; }
+QTabBar::tab:hover:!selected { background: #d0d0d0; color: #333; }
+QLabel { color: #333; background: transparent; }
 QLabel#sectionHeader {
-    color: #aaa;
-    font-size: 11px;
-    font-weight: bold;
-    border-bottom: 1px solid #333;
-    padding-bottom: 2px;
+    color: #666; font-size: 11px; font-weight: bold;
+    border-bottom: 1px solid #ccc; padding-bottom: 2px;
 }
-QCheckBox {
-    color: #ccc;
-    spacing: 8px;
-}
+QCheckBox { color: #333; spacing: 8px; }
 QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #555;
-    border-radius: 3px;
-    background: #2a2a2a;
+    width: 16px; height: 16px;
+    border: 1px solid #aaa; border-radius: 3px; background: #fff;
 }
-QCheckBox::indicator:checked {
-    background: #3a7bd5;
-    border-color: #3a7bd5;
+QCheckBox::indicator:checked  { background: #3a7bd5; border-color: #3a7bd5; }
+QCheckBox::indicator:hover     { border-color: #666; }
+QComboBox {
+    background: #fff; color: #333;
+    border: 1px solid #aaa; border-radius: 4px; padding: 2px 6px;
 }
-QCheckBox::indicator:hover {
-    border-color: #888;
-}
+QComboBox QAbstractItemView { background: #fff; color: #333; selection-background-color: #3a7bd5; }
 QPushButton#okBtn {
-    background: #3a7bd5;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    padding: 6px 22px;
+    background: #3a7bd5; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; padding: 6px 22px;
 }
-QPushButton#okBtn:hover  { background: #4a8be5; }
+QPushButton#okBtn:hover   { background: #4a8be5; }
 QPushButton#okBtn:pressed { background: #2a6bc5; }
 QPushButton#cancelBtn {
-    background: #333;
-    color: #ccc;
-    border: 1px solid #444;
-    border-radius: 6px;
-    font-size: 12px;
-    padding: 6px 18px;
+    background: #e0e0e0; color: #333;
+    border: 1px solid #bbb; border-radius: 6px;
+    font-size: 12px; padding: 6px 18px;
+}
+QPushButton#cancelBtn:hover  { background: #d0d0d0; }
+QPushButton#cancelBtn:pressed { background: #bbb; }
+QFrame#divider { color: #ccc; }
+QLabel#note { color: #888; font-size: 11px; }
+"""
+    else:
+        return """
+QDialog { background: #1e1e1e; }
+QTabWidget::pane { border: 1px solid #333; background: #252525; }
+QTabBar::tab {
+    background: #2a2a2a; color: #aaa;
+    padding: 6px 18px; border: 1px solid #333;
+    border-bottom: none; border-radius: 4px 4px 0 0;
+}
+QTabBar::tab:selected  { background: #252525; color: #fff; }
+QTabBar::tab:hover:!selected { background: #333; color: #ccc; }
+QLabel { color: #ccc; background: transparent; }
+QLabel#sectionHeader {
+    color: #aaa; font-size: 11px; font-weight: bold;
+    border-bottom: 1px solid #333; padding-bottom: 2px;
+}
+QCheckBox { color: #ccc; spacing: 8px; }
+QCheckBox::indicator {
+    width: 16px; height: 16px;
+    border: 1px solid #555; border-radius: 3px; background: #2a2a2a;
+}
+QCheckBox::indicator:checked  { background: #3a7bd5; border-color: #3a7bd5; }
+QCheckBox::indicator:hover     { border-color: #888; }
+QComboBox {
+    background: #2a2a2a; color: #ccc;
+    border: 1px solid #555; border-radius: 4px; padding: 2px 6px;
+}
+QComboBox QAbstractItemView { background: #2e2e2e; color: #ccc; selection-background-color: #3a7bd5; }
+QPushButton#okBtn {
+    background: #3a7bd5; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; padding: 6px 22px;
+}
+QPushButton#okBtn:hover   { background: #4a8be5; }
+QPushButton#okBtn:pressed { background: #2a6bc5; }
+QPushButton#cancelBtn {
+    background: #333; color: #ccc;
+    border: 1px solid #444; border-radius: 6px;
+    font-size: 12px; padding: 6px 18px;
 }
 QPushButton#cancelBtn:hover  { background: #444; color: #fff; }
 QPushButton#cancelBtn:pressed { background: #555; }
 QFrame#divider { color: #333; }
-QLabel#note {
-    color: #777;
-    font-size: 11px;
-}
+QLabel#note { color: #777; font-size: 11px; }
 """
 
 
-def _swatch_style(color: QColor) -> str:
+def _swatch_style(color: QColor, theme: str = "dark") -> str:
+    border = "#aaa" if theme == "light" else "#555"
     return (
         f"background: {color.name()};"
-        "border: 1px solid #555;"
+        f"border: 1px solid {border};"
         "border-radius: 4px;"
     )
 
@@ -134,13 +145,15 @@ class SettingsDialog(QDialog):
         self._orig_media_start_muted = settings.media_start_muted
         self._orig_close_to_tray = settings.close_to_tray
         self._orig_run_at_startup = settings.run_at_startup
+        self._orig_theme = settings.theme
 
         self._current_backdrop = QColor(settings.backdrop_color)
+        self._current_theme = settings.theme
 
         self.setWindowTitle("Settings")
         self.setFixedSize(420, 470)
         self.setModal(True)
-        self.setStyleSheet(_STYLE)
+        self.setStyleSheet(_make_style(self._current_theme))
         self._build_ui()
 
     # ------------------------------------------------------------------ #
@@ -189,6 +202,25 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(16, 16, 16, 8)
         layout.setSpacing(12)
 
+        hdr_theme = QLabel("Theme")
+        hdr_theme.setObjectName("sectionHeader")
+        layout.addWidget(hdr_theme)
+
+        theme_row = QHBoxLayout()
+        theme_row.setSpacing(10)
+        theme_row.addWidget(QLabel("Color theme:"))
+        theme_row.addStretch()
+
+        self._theme_combo = QComboBox()
+        self._theme_combo.addItem("Dark", "dark")
+        self._theme_combo.addItem("Light", "light")
+        self._theme_combo.setCurrentIndex(0 if self._current_theme == "dark" else 1)
+        self._theme_combo.currentIndexChanged.connect(self._on_theme_changed)
+        theme_row.addWidget(self._theme_combo)
+        layout.addLayout(theme_row)
+
+        layout.addSpacing(8)
+
         hdr = QLabel("Backdrop")
         hdr.setObjectName("sectionHeader")
         layout.addWidget(hdr)
@@ -201,7 +233,7 @@ class SettingsDialog(QDialog):
 
         self._color_swatch = QPushButton()
         self._color_swatch.setFixedSize(64, 24)
-        self._color_swatch.setStyleSheet(_swatch_style(self._current_backdrop))
+        self._color_swatch.setStyleSheet(_swatch_style(self._current_backdrop, self._current_theme))
         self._color_swatch.setToolTip("Click to choose color")
         self._color_swatch.setCursor(Qt.CursorShape.PointingHandCursor)
         self._color_swatch.clicked.connect(self._pick_color)
@@ -298,6 +330,14 @@ class SettingsDialog(QDialog):
         if not checked:
             self._run_at_startup_cb.setChecked(False)
 
+    def _on_theme_changed(self, index: int) -> None:
+        self._current_theme = self._theme_combo.itemData(index)
+        if self._app is not None:
+            self._app.apply_theme(self._current_theme)
+        # Re-style this dialog to match the new theme
+        self.setStyleSheet(_make_style(self._current_theme))
+        self._color_swatch.setStyleSheet(_swatch_style(self._current_backdrop, self._current_theme))
+
     def _pick_color(self) -> None:
         color = QColorDialog.getColor(
             self._current_backdrop, self, "Choose backdrop color",
@@ -305,11 +345,12 @@ class SettingsDialog(QDialog):
         if not color.isValid():
             return
         self._current_backdrop = color
-        self._color_swatch.setStyleSheet(_swatch_style(color))
+        self._color_swatch.setStyleSheet(_swatch_style(color, self._current_theme))
         # Live preview
         self._viewer.set_backdrop_color(color)
 
     def _on_ok(self) -> None:
+        self._settings.theme = self._current_theme
         self._settings.backdrop_color = self._current_backdrop.name()
         self._settings.confirm_delete_file = self._confirm_delete_file_cb.isChecked()
         self._settings.confirm_delete_folder = self._confirm_delete_folder_cb.isChecked()
@@ -332,6 +373,8 @@ class SettingsDialog(QDialog):
         self.accept()
 
     def _on_cancel(self) -> None:
-        # Revert live backdrop preview
+        # Revert live theme and backdrop preview
+        if self._current_theme != self._orig_theme and self._app is not None:
+            self._app.apply_theme(self._orig_theme)
         self._viewer.set_backdrop_color(self._orig_backdrop)
         self.reject()

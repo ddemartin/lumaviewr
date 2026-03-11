@@ -97,6 +97,43 @@ class SettingsManager:
         self._s.setValue("view/backdrop_color", value)
         self._s.sync()
 
+    @property
+    def theme(self) -> str:
+        """UI theme: 'dark' or 'light'."""
+        return self._s.value("view/theme", "dark")
+
+    @theme.setter
+    def theme(self, value: str) -> None:
+        self._s.setValue("view/theme", value)
+        self._s.sync()
+
+    @property
+    def filmstrip_width(self) -> int:
+        return int(self._s.value("view/filmstrip_width", 220, type=int))
+
+    @filmstrip_width.setter
+    def filmstrip_width(self, value: int) -> None:
+        self._s.setValue("view/filmstrip_width", value)
+        self._s.sync()
+
+    @property
+    def metadata_panel_width(self) -> int:
+        return int(self._s.value("view/metadata_panel_width", 240, type=int))
+
+    @metadata_panel_width.setter
+    def metadata_panel_width(self, value: int) -> None:
+        self._s.setValue("view/metadata_panel_width", value)
+        self._s.sync()
+
+    @property
+    def metadata_panel_visible(self) -> bool:
+        return self._s.value("view/metadata_panel_visible", False, type=bool)
+
+    @metadata_panel_visible.setter
+    def metadata_panel_visible(self, value: bool) -> None:
+        self._s.setValue("view/metadata_panel_visible", value)
+        self._s.sync()
+
     # ------------------------------------------------------------------ #
     # Behaviour preferences                                                #
     # ------------------------------------------------------------------ #

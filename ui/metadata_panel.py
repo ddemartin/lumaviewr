@@ -67,8 +67,12 @@ def _fmt_focal(val) -> str:
 class _SectionLabel(QLabel):
     def __init__(self, text: str, parent=None):
         super().__init__(text.upper(), parent)
+        self.apply_theme("dark")
+
+    def apply_theme(self, theme: str) -> None:
+        color = "#888" if theme == "light" else "#777"
         self.setStyleSheet(
-            "color: #777; font-size: 10px; font-weight: bold; "
+            f"color: {color}; font-size: 10px; font-weight: bold; "
             "padding: 10px 0 3px 0; letter-spacing: 1px;"
         )
 
@@ -79,16 +83,21 @@ class _InfoRow(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 1, 0, 1)
         layout.setSpacing(6)
-        lbl = QLabel(label)
-        lbl.setStyleSheet("color: #777; font-size: 11px;")
-        lbl.setFixedWidth(70)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._lbl = QLabel(label)
+        self._lbl.setFixedWidth(70)
+        self._lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._value = QLabel("—")
-        self._value.setStyleSheet("color: #bbb; font-size: 11px;")
         self._value.setWordWrap(True)
         self._value.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        layout.addWidget(lbl)
+        layout.addWidget(self._lbl)
         layout.addWidget(self._value, stretch=1)
+        self.apply_theme("dark")
+
+    def apply_theme(self, theme: str) -> None:
+        lbl_color = "#555" if theme == "light" else "#777"
+        val_color = "#333" if theme == "light" else "#bbb"
+        self._lbl.setStyleSheet(f"color: {lbl_color}; font-size: 11px;")
+        self._value.setStyleSheet(f"color: {val_color}; font-size: 11px;")
 
     def set_value(self, text: str) -> None:
         self._value.setText(text or "—")
@@ -100,23 +109,41 @@ class _EditRow(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 3, 0, 3)
         layout.setSpacing(2)
-        lbl = QLabel(label)
-        lbl.setStyleSheet("color: #888; font-size: 10px;")
+        self._lbl = QLabel(label)
         self._edit = QLineEdit()
-        self._edit.setStyleSheet("""
-            QLineEdit {
-                background: #2a2a2a;
-                color: #ddd;
-                border: 1px solid #3a3a3a;
-                border-radius: 3px;
-                padding: 4px 7px;
-                font-size: 11px;
-            }
-            QLineEdit:focus { border-color: #4a8ccf; }
-            QLineEdit:disabled { color: #555; background: #222; }
-        """)
-        layout.addWidget(lbl)
+        layout.addWidget(self._lbl)
         layout.addWidget(self._edit)
+        self.apply_theme("dark")
+
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            self._lbl.setStyleSheet("color: #555; font-size: 10px;")
+            self._edit.setStyleSheet("""
+                QLineEdit {
+                    background: #fff;
+                    color: #222;
+                    border: 1px solid #bbb;
+                    border-radius: 3px;
+                    padding: 4px 7px;
+                    font-size: 11px;
+                }
+                QLineEdit:focus { border-color: #4a8ccf; }
+                QLineEdit:disabled { color: #999; background: #eee; }
+            """)
+        else:
+            self._lbl.setStyleSheet("color: #888; font-size: 10px;")
+            self._edit.setStyleSheet("""
+                QLineEdit {
+                    background: #2a2a2a;
+                    color: #ddd;
+                    border: 1px solid #3a3a3a;
+                    border-radius: 3px;
+                    padding: 4px 7px;
+                    font-size: 11px;
+                }
+                QLineEdit:focus { border-color: #4a8ccf; }
+                QLineEdit:disabled { color: #555; background: #222; }
+            """)
 
     @property
     def edit(self) -> QLineEdit:
@@ -152,39 +179,33 @@ class MetadataPanel(QWidget):
         layout.setSpacing(0)
 
         # ---- header ----
-        header = QWidget()
-        header.setStyleSheet("background: #252525; border-bottom: 1px solid #333;")
-        header.setFixedHeight(28)
-        hl = QHBoxLayout(header)
+        self._header = QWidget()
+        self._header.setFixedHeight(28)
+        hl = QHBoxLayout(self._header)
         hl.setContentsMargins(10, 0, 4, 0)
         hl.setSpacing(4)
-        title = QLabel("Metadata")
-        title.setStyleSheet("color: #ccc; font-size: 12px; font-weight: bold;")
-        close_btn = QPushButton("×")
-        close_btn.setFixedSize(20, 20)
-        close_btn.setToolTip("Close panel")
-        close_btn.setStyleSheet(
-            "QPushButton { background: transparent; color: #777; border: none; font-size: 16px; }"
-            "QPushButton:hover { color: #fff; }"
-        )
-        close_btn.clicked.connect(self.closed)
-        hl.addWidget(title, stretch=1)
-        hl.addWidget(close_btn)
-        layout.addWidget(header)
+        self._title_lbl = QLabel("Metadata")
+        self._title_lbl.setStyleSheet("font-size: 12px; font-weight: bold;")
+        self._close_btn = QPushButton("×")
+        self._close_btn.setFixedSize(20, 20)
+        self._close_btn.setToolTip("Close panel")
+        self._close_btn.clicked.connect(self.closed)
+        hl.addWidget(self._title_lbl, stretch=1)
+        hl.addWidget(self._close_btn)
+        layout.addWidget(self._header)
 
         # ---- scroll area ----
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet("QScrollArea { background: #1e1e1e; } QScrollBar:vertical { width: 6px; }")
-        content = QWidget()
-        content.setStyleSheet("background: #1e1e1e;")
-        cl = QVBoxLayout(content)
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._content = QWidget()
+        cl = QVBoxLayout(self._content)
         cl.setContentsMargins(10, 0, 10, 10)
         cl.setSpacing(0)
 
         # Camera (read-only)
-        cl.addWidget(_SectionLabel("Camera"))
+        self._sec_camera = _SectionLabel("Camera")
+        cl.addWidget(self._sec_camera)
         self._row_camera   = _InfoRow("Camera")
         self._row_datetime = _InfoRow("Date")
         self._row_shutter  = _InfoRow("Shutter")
@@ -196,13 +217,13 @@ class MetadataPanel(QWidget):
             cl.addWidget(row)
 
         # Separator
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color: #333; margin: 6px 0;")
-        cl.addWidget(sep)
+        self._sep = QFrame()
+        self._sep.setFrameShape(QFrame.Shape.HLine)
+        cl.addWidget(self._sep)
 
         # Edit (writable)
-        cl.addWidget(_SectionLabel("Edit"))
+        self._sec_edit = _SectionLabel("Edit")
+        cl.addWidget(self._sec_edit)
         self._edit_title       = _EditRow("Title")
         self._edit_description = _EditRow("Description")
         self._edit_keywords    = _EditRow("Keywords")
@@ -214,32 +235,81 @@ class MetadataPanel(QWidget):
             cl.addWidget(row)
 
         cl.addStretch()
-        scroll.setWidget(content)
-        layout.addWidget(scroll, stretch=1)
+        self._scroll.setWidget(self._content)
+        layout.addWidget(self._scroll, stretch=1)
 
         # ---- footer ----
-        footer = QWidget()
-        footer.setStyleSheet("background: #252525; border-top: 1px solid #333;")
-        fl = QVBoxLayout(footer)
+        self._footer = QWidget()
+        fl = QVBoxLayout(self._footer)
         fl.setContentsMargins(8, 6, 8, 8)
         fl.setSpacing(4)
         self._save_btn = QPushButton("Save to current file")
         self._save_btn.setEnabled(False)
-        self._save_btn.setStyleSheet("""
-            QPushButton {
-                background: #2e6da4; color: #fff; border: none;
-                border-radius: 4px; padding: 5px 10px; font-size: 11px;
-            }
-            QPushButton:hover { background: #3a7fc1; }
-            QPushButton:disabled { background: #2a2a2a; color: #555; }
-        """)
         self._save_btn.clicked.connect(self._on_save)
         self._note_lbl = QLabel("")
-        self._note_lbl.setStyleSheet("color: #666; font-size: 10px;")
         self._note_lbl.setWordWrap(True)
         fl.addWidget(self._save_btn)
         fl.addWidget(self._note_lbl)
-        layout.addWidget(footer)
+        layout.addWidget(self._footer)
+
+        self.apply_theme("dark")
+
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            header_bg, header_border = "#e8e8e8", "#ccc"
+            content_bg = "#f5f5f5"
+            footer_bg, footer_border = "#e8e8e8", "#ccc"
+            title_color = "#333"
+            close_normal, close_hover = "#888", "#111"
+            sep_color = "#ccc"
+            note_color = "#888"
+            save_disabled_bg, save_disabled_color = "#ddd", "#999"
+            scroll_bg = "#f5f5f5"
+        else:
+            header_bg, header_border = "#252525", "#333"
+            content_bg = "#1e1e1e"
+            footer_bg, footer_border = "#252525", "#333"
+            title_color = "#ccc"
+            close_normal, close_hover = "#777", "#fff"
+            sep_color = "#333"
+            note_color = "#666"
+            save_disabled_bg, save_disabled_color = "#2a2a2a", "#555"
+            scroll_bg = "#1e1e1e"
+
+        self._header.setStyleSheet(
+            f"background: {header_bg}; border-bottom: 1px solid {header_border};"
+        )
+        self._title_lbl.setStyleSheet(f"color: {title_color}; font-size: 12px; font-weight: bold;")
+        self._close_btn.setStyleSheet(
+            f"QPushButton {{ background: transparent; color: {close_normal}; border: none; font-size: 16px; }}"
+            f"QPushButton:hover {{ color: {close_hover}; }}"
+        )
+        self._scroll.setStyleSheet(
+            f"QScrollArea {{ background: {scroll_bg}; }} QScrollBar:vertical {{ width: 6px; }}"
+        )
+        self._content.setStyleSheet(f"background: {content_bg};")
+        self._sep.setStyleSheet(f"color: {sep_color}; margin: 6px 0;")
+        self._footer.setStyleSheet(
+            f"background: {footer_bg}; border-top: 1px solid {footer_border};"
+        )
+        self._save_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: #2e6da4; color: #fff; border: none;
+                border-radius: 4px; padding: 5px 10px; font-size: 11px;
+            }}
+            QPushButton:hover {{ background: #3a7fc1; }}
+            QPushButton:disabled {{ background: {save_disabled_bg}; color: {save_disabled_color}; }}
+        """)
+        self._note_lbl.setStyleSheet(f"color: {note_color}; font-size: 10px;")
+
+        for sec in (self._sec_camera, self._sec_edit):
+            sec.apply_theme(theme)
+        for row in (self._row_camera, self._row_datetime, self._row_shutter,
+                    self._row_aperture, self._row_iso, self._row_focal):
+            row.apply_theme(theme)
+        for row in (self._edit_title, self._edit_description, self._edit_keywords,
+                    self._edit_copyright, self._edit_artist):
+            row.apply_theme(theme)
 
     # ------------------------------------------------------------------ #
     # Public API                                                           #

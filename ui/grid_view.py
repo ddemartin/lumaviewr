@@ -177,6 +177,10 @@ class ThumbnailDelegate(QStyledItemDelegate):
     def __init__(self, extra_selected: "set[Path]", parent=None):
         super().__init__(parent)
         self._extra_selected = extra_selected
+        self._theme = "dark"
+
+    def set_theme(self, theme: str) -> None:
+        self._theme = theme
 
     def paint(
         self,
@@ -253,16 +257,28 @@ class ThumbnailDelegate(QStyledItemDelegate):
             return None
         editor = QLineEdit(parent)
         editor.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        editor.setStyleSheet("""
-            QLineEdit {
-                background: #1a3a5c;
-                color: #fff;
-                border: 1px solid #4a8ccf;
-                border-radius: 2px;
-                font-size: 9px;
-                padding: 0 2px;
-            }
-        """)
+        if self._theme == "light":
+            editor.setStyleSheet("""
+                QLineEdit {
+                    background: #dceeff;
+                    color: #111;
+                    border: 1px solid #4a8ccf;
+                    border-radius: 2px;
+                    font-size: 9px;
+                    padding: 0 2px;
+                }
+            """)
+        else:
+            editor.setStyleSheet("""
+                QLineEdit {
+                    background: #1a3a5c;
+                    color: #fff;
+                    border: 1px solid #4a8ccf;
+                    border-radius: 2px;
+                    font-size: 9px;
+                    padding: 0 2px;
+                }
+            """)
         return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
@@ -317,13 +333,15 @@ class GridView(QListView):
         self._suppress_selection = False   # guard against programmatic selects
         self._extra_selected: set[Path] = set()  # Ctrl+click multi-select
         self.setModel(self._thumb_model)
-        self.setItemDelegate(ThumbnailDelegate(self._extra_selected))
+        self._delegate = ThumbnailDelegate(self._extra_selected)
+        self.setItemDelegate(self._delegate)
         self.setViewMode(QListView.ViewMode.IconMode)
         self.setResizeMode(QListView.ResizeMode.Adjust)
         self.setMovement(QListView.Movement.Static)
         self.setSpacing(4)
         self.setUniformItemSizes(True)
         self.setStyleSheet("background: #1e1e1e; border: none;")
+        self._theme = "dark"
         self.setEditTriggers(QAbstractItemView.EditTrigger.EditKeyPressed)
         # Single-click OR keyboard navigation triggers the image
         self.selectionModel().currentChanged.connect(self._on_current_changed)
@@ -336,6 +354,12 @@ class GridView(QListView):
         self._scroll_timer.setInterval(150)
         self._scroll_timer.timeout.connect(self.scroll_changed)
         self.verticalScrollBar().valueChanged.connect(self._scroll_timer.start)
+
+    def apply_theme(self, theme: str) -> None:
+        self._theme = theme
+        self._delegate.set_theme(theme)
+        bg = "#f5f5f5" if theme == "light" else "#1e1e1e"
+        self.setStyleSheet(f"background: {bg}; border: none;")
 
     def refresh(self) -> None:
         self._suppress_selection = True

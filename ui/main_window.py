@@ -361,45 +361,26 @@ class ExpandedGridOverlay(QWidget):
         super().__init__(parent)
 
         # Header bar
-        header = QWidget(self)
-        header.setFixedHeight(36)
-        header.setStyleSheet(
-            "background: #252525; border-bottom: 1px solid #3a3a3a;"
-        )
-        hl = QHBoxLayout(header)
+        self._header = QWidget(self)
+        self._header.setFixedHeight(36)
+        hl = QHBoxLayout(self._header)
         hl.setContentsMargins(8, 4, 8, 4)
         hl.setSpacing(8)
 
-        self._close_btn = QPushButton("✕", header)
+        self._close_btn = QPushButton("✕", self._header)
         self._close_btn.setFixedSize(26, 26)
         self._close_btn.setToolTip("Close grid view  (Esc)")
-        self._close_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(60,60,60,0.9); color: #bbb;
-                border: 1px solid #555; border-radius: 4px; font-size: 12px;
-            }
-            QPushButton:hover   { background: rgba(180,50,50,0.9); color: #fff; }
-            QPushButton:pressed { background: rgba(200,60,60,0.9); }
-        """)
         self._close_btn.clicked.connect(self.close_requested)
 
-        self._folder_lbl = QLabel("", header)
-        self._folder_lbl.setStyleSheet("color: #ccc; font-size: 11px;")
+        self._folder_lbl = QLabel("", self._header)
 
-        self._search_input = QLineEdit(header)
+        self._search_input = QLineEdit(self._header)
         self._search_input.setPlaceholderText("Search…")
         self._search_input.setFixedWidth(200)
         self._search_input.setFixedHeight(24)
-        self._search_input.setStyleSheet("""
-            QLineEdit {
-                background: #1a1a1a; color: #ddd; border: 1px solid #444;
-                border-radius: 3px; padding: 2px 6px; font-size: 11px;
-            }
-            QLineEdit:focus { border-color: #4a8ccf; }
-        """)
 
-        self._search_count = QLabel("", header)
-        self._search_count.setStyleSheet("color: #666; font-size: 10px; min-width: 40px;")
+        self._search_count = QLabel("", self._header)
+        self._search_count.setStyleSheet("font-size: 10px; min-width: 40px;")
 
         hl.addWidget(self._close_btn)
         hl.addWidget(self._folder_lbl, stretch=1)
@@ -407,6 +388,7 @@ class ExpandedGridOverlay(QWidget):
         hl.addWidget(self._search_count)
 
         # Grid
+        self._theme = "dark"
         self._inner_grid = GridView(folder_model, self)
         self._inner_grid.image_activated.connect(self.image_selected)
         self._inner_grid.folder_activated.connect(self.folder_selected)
@@ -417,8 +399,9 @@ class ExpandedGridOverlay(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(header)
+        layout.addWidget(self._header)
         layout.addWidget(self._inner_grid, stretch=1)
+        self.apply_theme("dark")
 
     def refresh(self) -> None:
         self._inner_grid.refresh()
@@ -456,10 +439,52 @@ class ExpandedGridOverlay(QWidget):
     def get_filter_stats(self) -> tuple[int, int]:
         return self._inner_grid._thumb_model.filter_stats
 
+    def apply_theme(self, theme: str) -> None:
+        self._theme = theme
+        self._inner_grid.apply_theme(theme)
+        if theme == "light":
+            hdr_bg, hdr_border = "#e8e8e8", "#ccc"
+            close_style = (
+                "QPushButton { background: rgba(220,220,220,0.9); color: #444;"
+                " border: 1px solid #bbb; border-radius: 4px; font-size: 12px; }"
+                "QPushButton:hover { background: rgba(180,50,50,0.9); color: #fff; }"
+                "QPushButton:pressed { background: rgba(200,60,60,0.9); }"
+            )
+            folder_color = "#333"
+            search_style = (
+                "QLineEdit { background: #fff; color: #222; border: 1px solid #bbb;"
+                " border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+                "QLineEdit:focus { border-color: #4a8ccf; }"
+            )
+            count_color = "#888"
+        else:
+            hdr_bg, hdr_border = "#252525", "#3a3a3a"
+            close_style = (
+                "QPushButton { background: rgba(60,60,60,0.9); color: #bbb;"
+                " border: 1px solid #555; border-radius: 4px; font-size: 12px; }"
+                "QPushButton:hover { background: rgba(180,50,50,0.9); color: #fff; }"
+                "QPushButton:pressed { background: rgba(200,60,60,0.9); }"
+            )
+            folder_color = "#ccc"
+            search_style = (
+                "QLineEdit { background: #1a1a1a; color: #ddd; border: 1px solid #444;"
+                " border-radius: 3px; padding: 2px 6px; font-size: 11px; }"
+                "QLineEdit:focus { border-color: #4a8ccf; }"
+            )
+            count_color = "#666"
+
+        self._header.setStyleSheet(f"background: {hdr_bg}; border-bottom: 1px solid {hdr_border};")
+        self._close_btn.setStyleSheet(close_style)
+        self._folder_lbl.setStyleSheet(f"color: {folder_color}; font-size: 11px;")
+        self._search_input.setStyleSheet(search_style)
+        self._search_count.setStyleSheet(f"color: {count_color}; font-size: 10px; min-width: 40px;")
+        self.update()
+
     def paintEvent(self, event) -> None:
         from PySide6.QtGui import QPainter
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(18, 18, 18))
+        bg = QColor(245, 245, 245) if self._theme == "light" else QColor(18, 18, 18)
+        painter.fillRect(self.rect(), bg)
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key.Key_Escape:
@@ -717,10 +742,6 @@ class MainWindow(QMainWindow):
         if geom:
             self.restoreGeometry(geom)
 
-        splitter_state = self._settings.load_splitter_state()
-        if splitter_state:
-            self.centralWidget().restoreState(splitter_state)  # type: ignore[union-attr]
-
         stretch = self._settings.stretch_small
         self._stretch_act.setChecked(stretch)
         self._container.viewer.set_stretch_small(stretch)
@@ -730,8 +751,14 @@ class MainWindow(QMainWindow):
         if self._settings.filmstrip_visible:
             self._left_panel.show()
 
-        if self._settings.get("view/metadata_panel_visible", False):
+        if self._settings.metadata_panel_visible:
+            self._meta_panel.show()
+            self._meta_panel_act.blockSignals(True)
             self._meta_panel_act.setChecked(True)
+            self._meta_panel_act.blockSignals(False)
+
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(0, self._apply_saved_splitter_sizes)
 
         if self._settings.start_fullscreen:
             self.showFullScreen()
@@ -746,9 +773,26 @@ class MainWindow(QMainWindow):
             self._update_nav_bar()
             self._load_current()
 
+    def _apply_saved_splitter_sizes(self) -> None:
+        """Apply saved panel widths after the window layout is computed."""
+        splitter = self.centralWidget()
+        total = sum(splitter.sizes())
+        if total <= 0:
+            return
+        filmstrip_w = self._settings.filmstrip_width if self._left_panel.isVisible() else 0
+        meta_w = self._settings.metadata_panel_width if self._meta_panel.isVisible() else 0
+        viewer_w = max(200, total - filmstrip_w - meta_w)
+        splitter.setSizes([filmstrip_w, viewer_w, meta_w])
+
     def set_tray_available(self, available: bool) -> None:
         """Called by LumaApp after creating or destroying the tray icon."""
         self._tray_available = available
+
+    def apply_theme(self, theme: str) -> None:
+        """Propagate theme change to child widgets that have hardcoded styles."""
+        self._grid.apply_theme(theme)
+        self._meta_panel.apply_theme(theme)
+        self._expanded_overlay.apply_theme(theme)
 
     def closeEvent(self, event) -> None:
         if self._tray_available and self._settings.close_to_tray:
@@ -771,8 +815,13 @@ class MainWindow(QMainWindow):
             pool.clear()
         self._settings.save_geometry(self.saveGeometry())
         splitter = self.centralWidget()
-        if hasattr(splitter, "saveState"):
-            self._settings.save_splitter_state(splitter.saveState())
+        if hasattr(splitter, "sizes"):
+            sizes = splitter.sizes()
+            if len(sizes) == 3:
+                if sizes[0] > 0:
+                    self._settings.filmstrip_width = sizes[0]
+                if sizes[2] > 0:
+                    self._settings.metadata_panel_width = sizes[2]
         super().closeEvent(event)
         # setQuitOnLastWindowClosed(False) is set globally for tray support,
         # so we must quit the event loop explicitly when actually closing.
@@ -1431,18 +1480,19 @@ class MainWindow(QMainWindow):
         self._settings.stretch_small = checked
 
     def _on_metadata_panel_toggled(self, checked: bool) -> None:
+        splitter = self.centralWidget()
+        sizes = splitter.sizes()
         if checked:
             self._meta_panel.show()
-            # Give the panel a reasonable initial width if it has none
-            splitter = self.centralWidget()
-            sizes = splitter.sizes()
             if len(sizes) == 3 and sizes[2] < 10:
+                panel_w = self._settings.metadata_panel_width
                 total = sizes[1] + sizes[2]
-                panel_w = min(240, total // 4)
-                splitter.setSizes([sizes[0], total - panel_w, panel_w])
+                splitter.setSizes([sizes[0], max(200, total - panel_w), panel_w])
         else:
+            if len(sizes) == 3 and sizes[2] > 0:
+                self._settings.metadata_panel_width = sizes[2]
             self._meta_panel.hide()
-        self._settings.set("view/metadata_panel_visible", checked)
+        self._settings.metadata_panel_visible = checked
 
     # ------------------------------------------------------------------ #
     # Search                                                               #
@@ -1548,7 +1598,21 @@ class MainWindow(QMainWindow):
         self._update_search_count(vis, total)
 
     def _toggle_filmstrip(self) -> None:
-        self._left_panel.setVisible(not self._left_panel.isVisible())
+        if self._left_panel.isVisible():
+            splitter = self.centralWidget()
+            if hasattr(splitter, "sizes"):
+                w = splitter.sizes()[0]
+                if w > 0:
+                    self._settings.filmstrip_width = w
+            self._left_panel.hide()
+        else:
+            w = self._settings.filmstrip_width
+            splitter = self.centralWidget()
+            if hasattr(splitter, "sizes"):
+                sizes = splitter.sizes()
+                total = sizes[0] + sizes[1]
+                splitter.setSizes([w, max(200, total - w), sizes[2]])
+            self._left_panel.show()
 
     def _start_rename(self) -> None:
         if self._expanded_overlay.isVisible():
