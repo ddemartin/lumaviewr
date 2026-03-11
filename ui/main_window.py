@@ -32,6 +32,7 @@ from ui.overlay_bar import OverlayBar
 from ui.navigator_widget import NavigatorWidget
 from ui.grid_view import GridView
 from ui.flip_bar import FlipBar
+from ui.resize_bar import ResizeBar
 from ui.slideshow_bar import SlideShowBar
 from ui.spinner_widget import SpinnerWidget
 from utils.threading import LoadImageWorker, ThumbnailWorker, FullResWorker, ThreadWorker
@@ -54,6 +55,9 @@ _ROTATABLE_SUFFIXES = _CROPPABLE_SUFFIXES | frozenset({".gif"})
 
 # Flip shares the same set as rotation
 _FLIPPABLE_SUFFIXES = _ROTATABLE_SUFFIXES
+
+# Resize works for all PIL-writable formats
+_RESIZABLE_SUFFIXES = _CROPPABLE_SUFFIXES
 
 
 # ------------------------------------------------------------------ #
@@ -129,6 +133,76 @@ class _AdjustWorker(QRunnable):
         except RuntimeError:
             pass
         except Exception:
+            pass
+
+
+# ------------------------------------------------------------------ #
+# Resize helpers                                                       #
+# ------------------------------------------------------------------ #
+
+def _apply_resize(pil_img, params: dict):
+    """Return a resized PIL Image according to *params* from ResizeBar.get_params()."""
+    from PIL import Image
+    mode_id  = params["mode_id"]
+    w, h     = params["w"], params["h"]
+    resample = params["resample"]
+    ow, oh   = pil_img.width, pil_img.height
+
+    if mode_id == 0:        # Pixels — exact target size
+        new_w, new_h = w, h
+    elif mode_id == 1:      # Percent
+        new_w = max(1, round(ow * w / 100))
+        new_h = max(1, round(oh * h / 100))
+    else:                   # Max fit — scale to fit within w × h box
+        ratio = min(w / ow, h / oh)
+        new_w = max(1, round(ow * ratio))
+        new_h = max(1, round(oh * ratio))
+
+    return pil_img.resize((new_w, new_h), resample=resample)
+
+
+def _save_resized(pil_img, dest: Path, src_suffix: str) -> None:
+    """Save *pil_img* to *dest* with format-appropriate kwargs."""
+    kwargs: dict = {}
+    out_sfx = dest.suffix.lower()
+    if out_sfx in (".jpg", ".jpeg"):
+        kwargs["quality"] = 95
+    elif out_sfx in (".tif", ".tiff"):
+        kwargs["compression"] = "tiff_lzw"
+    pil_img.save(dest, **kwargs)
+
+
+class _ResizeSignals(QObject):
+    finished = Signal(int, int)   # (done_count, error_count)
+
+
+class _ResizeBatchWorker(QRunnable):
+    """Batch-resize a list of (src, dest) pairs in a background thread."""
+
+    def __init__(self, jobs: list, params: dict) -> None:
+        super().__init__()
+        self._jobs   = jobs    # [(Path src, Path dest), ...]
+        self._params = params
+        self.signals = _ResizeSignals()
+        self.setAutoDelete(True)
+
+    @Slot()
+    def run(self) -> None:
+        from PIL import Image
+        done = errors = 0
+        for src, dest in self._jobs:
+            try:
+                with Image.open(src) as img:
+                    out = _apply_resize(img.copy(), self._params)
+                    _save_resized(out, dest, src.suffix.lower())
+                done += 1
+            except RuntimeError:
+                return
+            except Exception:
+                errors += 1
+        try:
+            self.signals.finished.emit(done, errors)
+        except RuntimeError:
             pass
 
 
@@ -272,12 +346,14 @@ class ViewerContainer(QWidget):
         self.adjust_bar    = AdjustBar(self)
         self.rotate_bar    = RotateBar(self)
         self.flip_bar      = FlipBar(self)
+        self.resize_bar    = ResizeBar(self)
         self.slideshow_bar = SlideShowBar(self)
         self.overlay.hide()
         self.crop_bar.hide()
         self.adjust_bar.hide()
         self.rotate_bar.hide()
         self.flip_bar.hide()
+        self.resize_bar.hide()
         self.slideshow_bar.hide()
 
         self._stack = QStackedWidget(self)
@@ -377,6 +453,11 @@ class ViewerContainer(QWidget):
             fw = self.flip_bar.sizeHint().width()
             fh = self.flip_bar.sizeHint().height()
             self.flip_bar.setGeometry((self.width() - fw) // 2, m, fw, fh)
+        # ResizeBar — top-centre (only when visible)
+        if self.resize_bar.isVisible():
+            rw = max(self.resize_bar.sizeHint().width(), min(560, self.width() - 40))
+            rh = self.resize_bar.sizeHint().height()
+            self.resize_bar.setGeometry((self.width() - rw) // 2, m, rw, rh)
         # SlideShowBar — top-centre (only when visible)
         if self.slideshow_bar.isVisible():
             sw = self.slideshow_bar.sizeHint().width()
@@ -428,6 +509,7 @@ class MainWindow(QMainWindow):
         self._adjust_mode_active: bool = False
         self._rotate_mode_active: bool = False
         self._flip_mode_active: bool = False
+        self._resize_mode_active: bool = False
         self._slideshow_active: bool = False
         self._slideshow_playing: bool = False
         self._slideshow_timer = QTimer(self)
@@ -648,6 +730,11 @@ class MainWindow(QMainWindow):
         self._act_flip.setEnabled(False)
         self._act_flip.triggered.connect(self._enter_flip_mode)
         edit_menu.addAction(self._act_flip)
+        self._act_resize = QAction("Resi&ze…", self)
+        self._act_resize.setShortcut(QKeySequence("Z"))
+        self._act_resize.setEnabled(False)
+        self._act_resize.triggered.connect(self._enter_resize_mode)
+        edit_menu.addAction(self._act_resize)
         edit_menu.addSeparator()
         rename_act = QAction("Re&name", self)
         rename_act.setShortcut(QKeySequence("F2"))
@@ -781,6 +868,8 @@ class MainWindow(QMainWindow):
             self._exit_rotate_mode()
         if self._flip_mode_active:
             self._exit_flip_mode()
+        if self._resize_mode_active:
+            self._exit_resize_mode()
         entry = self._folder_model.current
         if entry is None:
             return
@@ -818,6 +907,7 @@ class MainWindow(QMainWindow):
         self._act_adjust.setEnabled(suffix in _ADJUSTABLE_SUFFIXES and not animated)
         self._act_rotate.setEnabled(suffix in _ROTATABLE_SUFFIXES)
         self._act_flip.setEnabled(suffix in _FLIPPABLE_SUFFIXES)
+        self._act_resize.setEnabled(suffix in _RESIZABLE_SUFFIXES and not animated)
         if handle.preview and not handle.preview.isNull():
             self._container.viewer.set_native_size(m.width, m.height)
             if animated:
@@ -1079,6 +1169,10 @@ class MainWindow(QMainWindow):
             self._exit_adjust_mode()
         if self._rotate_mode_active:
             self._exit_rotate_mode()
+        if self._flip_mode_active:
+            self._exit_flip_mode()
+        if self._resize_mode_active:
+            self._exit_resize_mode()
         self._slideshow_active = True
         self._slideshow_playing = False
         bar = self._container.slideshow_bar
@@ -1737,6 +1831,133 @@ class MainWindow(QMainWindow):
                 disposal=2,
             )
 
+    # ------------------------------------------------------------------ #
+    # Resize                                                               #
+    # ------------------------------------------------------------------ #
+
+    def _enter_resize_mode(self) -> None:
+        if self._current_handle is None or self._resize_mode_active:
+            return
+        if self._slideshow_active:
+            self._exit_slideshow()
+        suffix = self._current_handle.path.suffix.lower()
+        if suffix not in _RESIZABLE_SUFFIXES:
+            return
+        self._resize_mode_active = True
+        resize_bar = self._container.resize_bar
+        resize_bar.reset()
+        m = self._current_handle.metadata
+        resize_bar.set_original_size(m.width, m.height)
+        resize_bar.set_overwrite_allowed(suffix in _CROPPABLE_SUFFIXES)
+        resize_bar.show()
+        resize_bar.raise_()
+        self._container._reposition_overlays()
+        self._container.overlay.hide()
+        resize_bar.cancel_requested.connect(self._exit_resize_mode)
+        resize_bar.save_as_requested.connect(self._on_resize_save_as)
+        resize_bar.overwrite_requested.connect(self._on_resize_overwrite)
+
+    def _exit_resize_mode(self) -> None:
+        if not self._resize_mode_active:
+            return
+        self._resize_mode_active = False
+        resize_bar = self._container.resize_bar
+        resize_bar.hide()
+        try:
+            resize_bar.cancel_requested.disconnect(self._exit_resize_mode)
+            resize_bar.save_as_requested.disconnect(self._on_resize_save_as)
+            resize_bar.overwrite_requested.disconnect(self._on_resize_overwrite)
+        except RuntimeError:
+            pass
+
+    def _on_resize_save_as(self) -> None:
+        if self._current_handle is None:
+            return
+        params = self._container.resize_bar.get_params()
+        if params["batch"]:
+            self._do_resize_batch(overwrite=False, params=params)
+        else:
+            path   = self._current_handle.path
+            suffix = params["suffix"] or "_resized"
+            default_path = str(path.parent / (path.stem + suffix + path.suffix))
+            fmt_filters = {
+                ".jpg":  "JPEG (*.jpg *.jpeg)",
+                ".jpeg": "JPEG (*.jpg *.jpeg)",
+                ".png":  "PNG (*.png)",
+                ".bmp":  "BMP (*.bmp)",
+                ".tif":  "TIFF (*.tif *.tiff)",
+                ".tiff": "TIFF (*.tif *.tiff)",
+                ".webp": "WebP (*.webp)",
+            }
+            sfx = path.suffix.lower()
+            default_filter = fmt_filters.get(sfx, "PNG (*.png)")
+            all_filter = "All images (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp)"
+            out_path, _ = QFileDialog.getSaveFileName(
+                self, "Save Resized Image", default_path,
+                f"{default_filter};;{all_filter}",
+            )
+            if out_path:
+                self._do_resize_single(Path(out_path), params, invalidate=False)
+
+    def _on_resize_overwrite(self) -> None:
+        if self._current_handle is None:
+            return
+        params = self._container.resize_bar.get_params()
+        if params["batch"]:
+            self._do_resize_batch(overwrite=True, params=params)
+        else:
+            self._do_resize_single(self._current_handle.path, params, invalidate=True)
+
+    def _do_resize_single(self, dest: Path, params: dict, *, invalidate: bool) -> None:
+        from PIL import Image
+        src = self._current_handle.path
+        try:
+            with Image.open(src) as img:
+                out = _apply_resize(img.copy(), params)
+                _save_resized(out, dest, src.suffix.lower())
+            if invalidate:
+                self._cache.invalidate(src)
+                self._exit_resize_mode()
+                self._load_current()
+            else:
+                self._exit_resize_mode()
+            self._status_bar.showMessage(f"Saved: {dest.name}", 4000)
+        except Exception as exc:
+            QMessageBox.warning(self, "Resize Failed", str(exc))
+
+    def _do_resize_batch(self, *, overwrite: bool, params: dict) -> None:
+        suffix = params["suffix"] or "_resized"
+        jobs: list = []
+        for entry in self._folder_model._entries:
+            if entry.is_dir:
+                continue
+            src = entry.path
+            if src.suffix.lower() not in _RESIZABLE_SUFFIXES:
+                continue
+            dest = src if overwrite else src.parent / (src.stem + suffix + src.suffix)
+            jobs.append((src, dest))
+        if not jobs:
+            return
+        n = len(jobs)
+        self._status_bar.showMessage(f"Resizing {n} image(s)…")
+        worker = _ResizeBatchWorker(jobs, params)
+        worker.signals.finished.connect(self._on_resize_batch_done)
+        self._exit_resize_mode()
+        # Reuse the adjust pool (1-thread, sequential)
+        self._adjust_pool.start(worker)
+
+    def _on_resize_batch_done(self, done: int, errors: int) -> None:
+        if errors:
+            self._status_bar.showMessage(
+                f"Resize complete: {done} saved, {errors} error(s).", 6000
+            )
+        else:
+            self._status_bar.showMessage(f"Resize complete: {done} image(s) saved.", 4000)
+        # Invalidate cache for current image in case it was overwritten
+        if self._current_handle is not None:
+            self._cache.invalidate(self._current_handle.path)
+            self._load_current()
+
     def _open_settings(self) -> None:
         dlg = SettingsDialog(self._settings, self._container.viewer, self, app=self._app)
         dlg.exec()
@@ -1770,6 +1991,8 @@ class MainWindow(QMainWindow):
                 self._exit_rotate_mode()
             elif self._flip_mode_active:
                 self._exit_flip_mode()
+            elif self._resize_mode_active:
+                self._exit_resize_mode()
             elif self._slideshow_active:
                 self._exit_slideshow()
             elif self.isFullScreen():
