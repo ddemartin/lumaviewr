@@ -15,3 +15,6 @@ psd-tools>=1.9.0
 
 # Optional — memory stats
 psutil>=5.9.0
+
+# Metadata editing — lossless JPEG EXIF write
+piexif>=1.1.3

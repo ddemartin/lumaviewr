@@ -7,7 +7,7 @@ from typing import Optional
 from PySide6.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QSize, QRect, Signal, QTimer, QPoint,
 )
-from PySide6.QtGui import QImage, QColor, QPainter, QFont
+from PySide6.QtGui import QImage, QColor, QPainter, QFont, QPen, QMouseEvent
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QLineEdit, QListView, QStyle,
     QStyledItemDelegate, QStyleOptionViewItem, QWidget,
@@ -111,6 +111,10 @@ class ThumbnailModel(QAbstractListModel):
 class ThumbnailDelegate(QStyledItemDelegate):
     """Renders a centred thumbnail + filename label."""
 
+    def __init__(self, extra_selected: "set[Path]", parent=None):
+        super().__init__(parent)
+        self._extra_selected = extra_selected
+
     def paint(
         self,
         painter: QPainter,
@@ -123,9 +127,12 @@ class ThumbnailDelegate(QStyledItemDelegate):
         entry: ImageEntry = index.data(Qt.ItemDataRole.UserRole)
         is_dir = entry is not None and entry.is_dir
         is_selected = bool(option.state & option.state.State_Selected)
+        is_extra = entry is not None and not entry.is_dir and entry.path in self._extra_selected
 
         if is_dir:
             bg_color = QColor(70, 120, 190) if is_selected else QColor(42, 42, 52)
+        elif is_extra:
+            bg_color = QColor(50, 90, 50)  # green tint for extra-selected
         else:
             bg_color = QColor(60, 110, 180) if is_selected else QColor(35, 35, 35)
         painter.fillRect(rect, bg_color)
@@ -159,6 +166,19 @@ class ThumbnailDelegate(QStyledItemDelegate):
         painter.setFont(QFont("sans-serif", 8))
         label_rect = QRect(rect.x(), rect.y() + rect.height() - 18, rect.width(), 18)
         painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, name)
+
+        # Checkmark badge for extra-selected items
+        if is_extra:
+            badge_size = 14
+            bx = rect.x() + rect.width() - badge_size - 3
+            by = rect.y() + 3
+            painter.setBrush(QColor(80, 160, 80))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(bx, by, badge_size, badge_size)
+            painter.setPen(QPen(QColor(255, 255, 255), 1.5))
+            cx, cy = bx + badge_size // 2, by + badge_size // 2
+            painter.drawLine(cx - 3, cy, cx - 1, cy + 3)
+            painter.drawLine(cx - 1, cy + 3, cx + 4, cy - 2)
 
         painter.restore()
 
@@ -212,14 +232,16 @@ class GridView(QListView):
 
     Signals
     -------
-    image_activated(Path)  -- emitted on single-click or keyboard navigation
+    image_activated(Path)         -- emitted on single-click or keyboard navigation
+    multi_selection_changed(list) -- emitted when Ctrl+click selection changes
     """
 
-    image_activated  = Signal(Path)
-    folder_activated = Signal(Path)
-    scroll_changed   = Signal()   # emitted (debounced) when scroll position changes
-    rename_done      = Signal(Path, Path)  # (old_path, new_path)
-    rename_failed    = Signal(str)
+    image_activated        = Signal(Path)
+    folder_activated       = Signal(Path)
+    scroll_changed         = Signal()   # emitted (debounced) when scroll position changes
+    rename_done            = Signal(Path, Path)  # (old_path, new_path)
+    rename_failed          = Signal(str)
+    multi_selection_changed = Signal(list)  # list[Path]
 
     def __init__(
         self,
@@ -229,8 +251,9 @@ class GridView(QListView):
         super().__init__(parent)
         self._thumb_model = ThumbnailModel(folder_model)
         self._suppress_selection = False   # guard against programmatic selects
+        self._extra_selected: set[Path] = set()  # Ctrl+click multi-select
         self.setModel(self._thumb_model)
-        self.setItemDelegate(ThumbnailDelegate())
+        self.setItemDelegate(ThumbnailDelegate(self._extra_selected))
         self.setViewMode(QListView.ViewMode.IconMode)
         self.setResizeMode(QListView.ResizeMode.Adjust)
         self.setMovement(QListView.Movement.Static)
@@ -298,6 +321,45 @@ class GridView(QListView):
         idx = self.currentIndex()
         if idx.isValid():
             self.edit(idx)
+
+    def get_selected_paths(self) -> list[Path]:
+        """Return current path + any extra Ctrl+clicked paths."""
+        paths: list[Path] = []
+        idx = self.currentIndex()
+        if idx.isValid():
+            entry = self._thumb_model.data(idx, Qt.ItemDataRole.UserRole)
+            if entry and not entry.is_dir:
+                paths.append(entry.path)
+        for p in self._extra_selected:
+            if p not in paths:
+                paths.append(p)
+        return paths
+
+    def clear_extra_selection(self) -> None:
+        """Clear Ctrl+click extra selection."""
+        if self._extra_selected:
+            self._extra_selected.clear()
+            self.viewport().update()
+            self.multi_selection_changed.emit([])
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            idx = self.indexAt(event.pos())
+            if idx.isValid():
+                entry = self._thumb_model.data(idx, Qt.ItemDataRole.UserRole)
+                if entry and not entry.is_dir:
+                    path = entry.path
+                    if path in self._extra_selected:
+                        self._extra_selected.discard(path)
+                    else:
+                        self._extra_selected.add(path)
+                    self.viewport().update()
+                    self.multi_selection_changed.emit(self.get_selected_paths())
+            return  # don't navigate on Ctrl+click
+        # Normal click: clear extra selection and navigate as usual
+        self._extra_selected.clear()
+        super().mousePressEvent(event)
+        self.multi_selection_changed.emit([])
 
     def _on_current_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
         if self._suppress_selection or not current.isValid():

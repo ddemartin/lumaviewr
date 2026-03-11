@@ -32,6 +32,7 @@ from ui.overlay_bar import OverlayBar
 from ui.navigator_widget import NavigatorWidget
 from ui.grid_view import GridView
 from ui.flip_bar import FlipBar
+from ui.metadata_panel import MetadataPanel
 from ui.resize_bar import ResizeBar
 from ui.slideshow_bar import SlideShowBar
 from ui.spinner_widget import SpinnerWidget
@@ -82,6 +83,41 @@ def _pil_to_qimage(pil_img) -> QImage:
     arr = np.ascontiguousarray(rgb)
     h, w, ch = arr.shape
     return QImage(arr.data, w, h, w * ch, QImage.Format.Format_RGB888).copy()
+
+
+def _write_exif_jpeg(path: Path, fields: dict) -> None:
+    """Losslessly insert/update EXIF tags in a JPEG file using piexif."""
+    import piexif
+    try:
+        exif_dict = piexif.load(str(path))
+    except Exception:
+        exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}}
+    ifd = exif_dict.setdefault("0th", {})
+    if fields.get("copyright") is not None:
+        ifd[piexif.ImageIFD.Copyright] = fields["copyright"].encode("utf-8")
+    if fields.get("artist") is not None:
+        ifd[piexif.ImageIFD.Artist] = fields["artist"].encode("utf-8")
+    if fields.get("description") is not None:
+        ifd[piexif.ImageIFD.ImageDescription] = fields["description"].encode("utf-8")
+    piexif.insert(piexif.dump(exif_dict), str(path))
+
+
+def _write_exif_pillow(path: Path, fields: dict) -> None:
+    """Write EXIF tags via Pillow (re-encodes file; lossless for TIFF/PNG/WebP)."""
+    from PIL import Image
+    with Image.open(path) as img:
+        exif = img.getexif()
+        if fields.get("copyright") is not None:
+            exif[33432] = fields["copyright"]
+        if fields.get("artist") is not None:
+            exif[315] = fields["artist"]
+        if fields.get("description") is not None:
+            exif[270] = fields["description"]
+        suffix = path.suffix.lower()
+        save_kwargs: dict = {"exif": exif.tobytes()}
+        if suffix in {".tif", ".tiff"}:
+            save_kwargs["compression"] = "tiff_lzw"
+        img.save(path, **save_kwargs)
 
 
 def _apply_adjustments(pil_img, brightness: int, contrast: int,
@@ -555,6 +591,9 @@ class MainWindow(QMainWindow):
         if self._settings.filmstrip_visible:
             self._left_panel.show()
 
+        if self._settings.get("view/metadata_panel_visible", False):
+            self._meta_panel_act.setChecked(True)
+
         if self._settings.start_fullscreen:
             self.showFullScreen()
 
@@ -636,13 +675,18 @@ class MainWindow(QMainWindow):
         self._container = ViewerContainer()
         self._container.media_player.apply_settings(self._settings)
 
+        # ---- right panel: metadata ----
+        self._meta_panel = MetadataPanel()
+
         # ---- splitter ----
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left)
         splitter.addWidget(self._container)
-        splitter.setSizes([200, 1080])
+        splitter.addWidget(self._meta_panel)
+        splitter.setSizes([200, 1080, 0])
         self._left_panel = left
         left.hide()
+        self._meta_panel.hide()
 
         self.setCentralWidget(splitter)
 
@@ -707,6 +751,12 @@ class MainWindow(QMainWindow):
         self._stretch_act.setShortcut(QKeySequence("S"))
         self._stretch_act.toggled.connect(self._on_stretch_toggled)
         view_menu.addAction(self._stretch_act)
+
+        self._meta_panel_act = QAction("&Metadata Panel", self)
+        self._meta_panel_act.setCheckable(True)
+        self._meta_panel_act.setShortcut(QKeySequence("Ctrl+I"))
+        self._meta_panel_act.toggled.connect(self._on_metadata_panel_toggled)
+        view_menu.addAction(self._meta_panel_act)
 
         # Edit
         edit_menu = mb.addMenu("&Edit")
@@ -786,6 +836,9 @@ class MainWindow(QMainWindow):
         self._grid.rename_failed.connect(self._on_rename_failed)
         self._expanded_overlay.rename_done.connect(self._on_rename_done)
         self._expanded_overlay.rename_failed.connect(self._on_rename_failed)
+        self._grid.multi_selection_changed.connect(self._meta_panel.set_selected_paths)
+        self._meta_panel.closed.connect(lambda: self._meta_panel_act.setChecked(False))
+        self._meta_panel.save_requested.connect(self._save_metadata)
         ss = self._container.slideshow_bar
         ss.play_pause_requested.connect(self._slideshow_toggle_play)
         ss.stop_requested.connect(self._exit_slideshow)
@@ -828,6 +881,7 @@ class MainWindow(QMainWindow):
         self._container.media_player.stop()
         self._folder_model.load_folder(folder)
         self._settings.last_folder = folder
+        self._grid.clear_extra_selection()
         self._grid.refresh()
         self._thumbnails_loaded = False
         self._update_nav_bar()
@@ -927,6 +981,7 @@ class MainWindow(QMainWindow):
         self._lbl_dims.setText(dims_text)
         self._on_zoom_changed(self._container.viewer.effective_zoom)
         self._update_navigator_rect()
+        self._meta_panel.set_image(handle.path, m)
 
         # Prefetch previews for adjacent images while the current one is displayed.
         self._schedule_prefetch()
@@ -1133,6 +1188,20 @@ class MainWindow(QMainWindow):
         self._container.viewer.set_stretch_small(checked)
         self._settings.stretch_small = checked
 
+    def _on_metadata_panel_toggled(self, checked: bool) -> None:
+        if checked:
+            self._meta_panel.show()
+            # Give the panel a reasonable initial width if it has none
+            splitter = self.centralWidget()
+            sizes = splitter.sizes()
+            if len(sizes) == 3 and sizes[2] < 10:
+                total = sizes[1] + sizes[2]
+                panel_w = min(240, total // 4)
+                splitter.setSizes([sizes[0], total - panel_w, panel_w])
+        else:
+            self._meta_panel.hide()
+        self._settings.set("view/metadata_panel_visible", checked)
+
     def _toggle_filmstrip(self) -> None:
         self._left_panel.setVisible(not self._left_panel.isVisible())
 
@@ -1281,6 +1350,39 @@ class MainWindow(QMainWindow):
         pending = [p for p in self._thumb_queue if p not in visible_set]
         front   = [p for p in self._thumb_queue if p in visible_set]
         self._thumb_queue = deque(front + pending)
+
+    # ------------------------------------------------------------------ #
+    # Metadata save                                                        #
+    # ------------------------------------------------------------------ #
+
+    def _save_metadata(self, fields: dict, paths: list[Path]) -> None:
+        """Write editable EXIF fields to one or more files."""
+        errors: list[str] = []
+        saved = 0
+        for path in paths:
+            suffix = path.suffix.lower()
+            if suffix not in {".jpg", ".jpeg", ".tif", ".tiff", ".png", ".webp"}:
+                continue
+            try:
+                if suffix in {".jpg", ".jpeg"}:
+                    _write_exif_jpeg(path, fields)
+                else:
+                    _write_exif_pillow(path, fields)
+                self._cache.invalidate(path)
+                saved += 1
+            except Exception as exc:
+                errors.append(f"{path.name}: {exc}")
+        if errors:
+            QMessageBox.warning(
+                self, "Save Metadata",
+                "Could not save to some files:\n" + "\n".join(errors[:5]),
+            )
+        if saved:
+            self._status_bar.showMessage(f"Metadata saved to {saved} file(s).", 3000)
+            # Refresh metadata panel for current image if it was among saved files
+            entry = self._folder_model.current
+            if entry and entry.path in paths:
+                self._load_current()
 
     def _delete_current_file(self) -> None:
         entry = self._folder_model.current
