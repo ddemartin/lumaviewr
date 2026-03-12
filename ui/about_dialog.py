@@ -1,4 +1,4 @@
-"""About dialog for Luma Viewer."""
+"""About dialog for Pix42."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QUrl
@@ -100,7 +100,7 @@ QFrame#divider {
 class AboutDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("About Luma Viewer")
+        self.setWindowTitle("About Pix42")
         self.setFixedSize(420, 560)
         self.setModal(True)
         self.setStyleSheet(_STYLE)
@@ -129,7 +129,7 @@ class AboutDialog(QDialog):
 
         title_col = QVBoxLayout()
         title_col.setSpacing(2)
-        name_lbl = QLabel("Luma Viewer")
+        name_lbl = QLabel("Pix42")
         name_lbl.setObjectName("appName")
         tag_lbl = QLabel("A fast, modern image viewer")
         tag_lbl.setObjectName("tagline")

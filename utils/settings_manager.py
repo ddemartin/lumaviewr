@@ -1,4 +1,4 @@
-"""Persistent user settings stored in AppData/LumaViewer/settings.ini."""
+"""Persistent user settings stored in AppData/Pix42/settings.ini."""
 from __future__ import annotations
 
 import sys
@@ -24,8 +24,8 @@ class SettingsManager:
     that QSettings IniFormat encodes them correctly as base64 strings.
     Plain Python ``bytes`` round-trips can silently corrupt the data.
 
-    File location: %APPDATA%\\LumaViewer\\settings.ini  (Windows)
-                   ~/.local/share/LumaViewer/settings.ini  (Linux/macOS)
+    File location: %APPDATA%\\Pix42\\settings.ini  (Windows)
+                   ~/.local/share/Pix42/settings.ini  (Linux/macOS)
     """
 
     def __init__(self) -> None:
@@ -240,7 +240,7 @@ class SettingsManager:
 # --------------------------------------------------------------------------- #
 
 def _apply_startup_registry(enable: bool) -> None:
-    """Add or remove the HKCU Run key so Luma starts with Windows (tray mode)."""
+    """Add or remove the HKCU Run key so Pix42 starts with Windows (tray mode)."""
     if sys.platform != "win32":
         return
     try:
@@ -255,10 +255,10 @@ def _apply_startup_registry(enable: bool) -> None:
                     cmd = f'"{sys.executable}" --tray'
                 else:
                     cmd = f'"{sys.executable}" "{Path(__file__).parent.parent / "main.py"}" --tray'
-                winreg.SetValueEx(key, "LumaViewer", 0, winreg.REG_SZ, cmd)
+                winreg.SetValueEx(key, "Pix42", 0, winreg.REG_SZ, cmd)
             else:
                 try:
-                    winreg.DeleteValue(key, "LumaViewer")
+                    winreg.DeleteValue(key, "Pix42")
                 except FileNotFoundError:
                     pass
     except Exception:

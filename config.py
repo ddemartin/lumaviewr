@@ -9,7 +9,7 @@ from pathlib import Path
 def _default_data_dir() -> Path:
     """Return platform-appropriate user-data directory."""
     base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return Path(base) / "LumaViewer"
+    return Path(base) / "Pix42"
 
 
 @dataclass

@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for Luma Viewer.
+"""PyInstaller spec for Pix42.
 
 Run via build_windows.bat, which passes --distpath and --workpath.
 SPECPATH is the scripts/ directory; project root is one level up.
@@ -35,7 +35,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Luma",
+    name="Pix42",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -55,5 +55,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Luma",
+    name="Pix42",
 )

@@ -1,15 +1,15 @@
-; Inno Setup 6 script for Luma Viewer
+; Inno Setup 6 script for Pix42
 ; Docs: https://jrsoftware.org/ishelp/
 ;
 ; Prerequisites before compiling:
-;   1. Run build_windows.bat to produce output\dist\Luma\
+;   1. Run build_windows.bat to produce output\dist\Pix42\
 ;   2. Convert assets/app/icon.svg to assets/app/icon.ico
 ;      (Inkscape CLI: inkscape icon.svg -o icon.ico  -- or any online tool)
 
-#define AppName      "Luma Viewer"
+#define AppName      "Pix42"
 #define AppVersion   "0.2.0"
 #define AppPublisher "DemaHub"
-#define AppExeName   "Luma.exe"
+#define AppExeName   "Pix42.exe"
 #define AppId        "{{C4F8A2E1-7B3D-4F5C-9A12-8E6D3F7B1C4A}"
 
 ; ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ AppId={#AppId}
 DefaultDirName={commonpf64}\{#AppName}
 DefaultGroupName={#AppName}
 OutputDir=output
-OutputBaseFilename=LumaViewer-{#AppVersion}-Setup-Windows_x64
+OutputBaseFilename=Pix42-{#AppVersion}-Setup-Windows_x64
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -47,22 +47,22 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
     GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 ; Shell integration
-Name: "contextmenu"; Description: """Open with Luma Viewer"" in right-click menu"; \
+Name: "contextmenu"; Description: """Open with Pix42"" in right-click menu"; \
     GroupDescription: "Shell integration:"
 
-; File associations (sets Luma as the default application)
+; File associations (sets Pix42 as the default application)
 Name: "assoc_images"; Description: "Common images  (.jpg  .jpeg  .png  .bmp  .gif  .webp  .tif  .tiff  .ico)"; \
-    GroupDescription: "File associations (sets Luma as default):"; Flags: unchecked
+    GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
 Name: "assoc_raw";    Description: "RAW camera files  (.cr2  .cr3  .nef  .arw  .dng  .rw2  .raf  .orf  ...)"; \
-    GroupDescription: "File associations (sets Luma as default):"; Flags: unchecked
+    GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
 Name: "assoc_fits";   Description: "FITS astronomical images  (.fit  .fits  .fts)"; \
-    GroupDescription: "File associations (sets Luma as default):"; Flags: unchecked
+    GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
 Name: "assoc_psd";    Description: "Adobe Photoshop documents  (.psd)"; \
-    GroupDescription: "File associations (sets Luma as default):"; Flags: unchecked
+    GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
 
 ; ---------------------------------------------------------------------------
 [Files]
-Source: "output\dist\Luma\*"; DestDir: "{app}"; \
+Source: "output\dist\Pix42\*"; DestDir: "{app}"; \
     Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; ---------------------------------------------------------------------------
@@ -81,92 +81,92 @@ Name: "{autodesktop}\{#AppName}";                 Filename: "{app}\{#AppExeName}
 
 ; ── ProgIDs ──────────────────────────────────────────────────────────────────
 
-; LumaViewer.ImageFile  (JPEG, PNG, TIFF, BMP, GIF, WEBP, ICO, …)
-Root: HKA; Subkey: "Software\Classes\LumaViewer.ImageFile"; \
+; Pix42.ImageFile  (JPEG, PNG, TIFF, BMP, GIF, WEBP, ICO, …)
+Root: HKA; Subkey: "Software\Classes\Pix42.ImageFile"; \
     ValueType: string; ValueName: ""; ValueData: "Image File"; Flags: uninsdeletekey; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\LumaViewer.ImageFile\DefaultIcon"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.ImageFile\DefaultIcon"; \
     ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\LumaViewer.ImageFile\shell\open\command"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.ImageFile\shell\open\command"; \
     ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""; Tasks: assoc_images
 
-; LumaViewer.RawFile  (camera RAW)
-Root: HKA; Subkey: "Software\Classes\LumaViewer.RawFile"; \
+; Pix42.RawFile  (camera RAW)
+Root: HKA; Subkey: "Software\Classes\Pix42.RawFile"; \
     ValueType: string; ValueName: ""; ValueData: "RAW Camera Image"; Flags: uninsdeletekey; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\LumaViewer.RawFile\DefaultIcon"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.RawFile\DefaultIcon"; \
     ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\LumaViewer.RawFile\shell\open\command"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.RawFile\shell\open\command"; \
     ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""; Tasks: assoc_raw
 
-; LumaViewer.FitsFile  (FITS astronomical images)
-Root: HKA; Subkey: "Software\Classes\LumaViewer.FitsFile"; \
+; Pix42.FitsFile  (FITS astronomical images)
+Root: HKA; Subkey: "Software\Classes\Pix42.FitsFile"; \
     ValueType: string; ValueName: ""; ValueData: "FITS Astronomical Image"; Flags: uninsdeletekey; Tasks: assoc_fits
-Root: HKA; Subkey: "Software\Classes\LumaViewer.FitsFile\DefaultIcon"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.FitsFile\DefaultIcon"; \
     ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"; Tasks: assoc_fits
-Root: HKA; Subkey: "Software\Classes\LumaViewer.FitsFile\shell\open\command"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.FitsFile\shell\open\command"; \
     ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""; Tasks: assoc_fits
 
-; LumaViewer.PsdFile  (Photoshop)
-Root: HKA; Subkey: "Software\Classes\LumaViewer.PsdFile"; \
+; Pix42.PsdFile  (Photoshop)
+Root: HKA; Subkey: "Software\Classes\Pix42.PsdFile"; \
     ValueType: string; ValueName: ""; ValueData: "Photoshop Document"; Flags: uninsdeletekey; Tasks: assoc_psd
-Root: HKA; Subkey: "Software\Classes\LumaViewer.PsdFile\DefaultIcon"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.PsdFile\DefaultIcon"; \
     ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName},0"; Tasks: assoc_psd
-Root: HKA; Subkey: "Software\Classes\LumaViewer.PsdFile\shell\open\command"; \
+Root: HKA; Subkey: "Software\Classes\Pix42.PsdFile\shell\open\command"; \
     ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""; Tasks: assoc_psd
 
 ; ── Extension → ProgID mappings ──────────────────────────────────────────────
 
 ; Common images (Pillow)
-Root: HKA; Subkey: "Software\Classes\.jpg";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.jpeg"; ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.png";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.bmp";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.gif";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.webp"; ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.tif";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.tiff"; ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.ico";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.ppm";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.pgm";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
-Root: HKA; Subkey: "Software\Classes\.pbm";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.jpg";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.jpeg"; ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.png";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.bmp";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.gif";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.webp"; ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.tif";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.tiff"; ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.ico";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.ppm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.pgm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.pbm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
 
 ; RAW camera files (rawpy / libraw)
-Root: HKA; Subkey: "Software\Classes\.cr2";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.cr3";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.nef";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.nrw";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.arw";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.srf";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.sr2";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.rw2";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.raf";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.orf";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.dng";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.pef";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.x3f";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.kdc";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.dcr";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.mrw";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.3fr";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.mef";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.erf";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.rwl";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
-Root: HKA; Subkey: "Software\Classes\.iiq";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.cr2";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.cr3";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.nef";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.nrw";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.arw";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.srf";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.sr2";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.rw2";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.raf";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.orf";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.dng";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.pef";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.x3f";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.kdc";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.dcr";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.mrw";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.3fr";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.mef";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.erf";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.rwl";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
+Root: HKA; Subkey: "Software\Classes\.iiq";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
 
 ; FITS astronomical images (astropy)
-Root: HKA; Subkey: "Software\Classes\.fit";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
-Root: HKA; Subkey: "Software\Classes\.fits"; ValueType: string; ValueName: ""; ValueData: "LumaViewer.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
-Root: HKA; Subkey: "Software\Classes\.fts";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
+Root: HKA; Subkey: "Software\Classes\.fit";  ValueType: string; ValueName: ""; ValueData: "Pix42.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
+Root: HKA; Subkey: "Software\Classes\.fits"; ValueType: string; ValueName: ""; ValueData: "Pix42.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
+Root: HKA; Subkey: "Software\Classes\.fts";  ValueType: string; ValueName: ""; ValueData: "Pix42.FitsFile"; Flags: uninsdeletevalue; Tasks: assoc_fits
 
 ; Photoshop (psd-tools)
-Root: HKA; Subkey: "Software\Classes\.psd";  ValueType: string; ValueName: ""; ValueData: "LumaViewer.PsdFile";  Flags: uninsdeletevalue; Tasks: assoc_psd
+Root: HKA; Subkey: "Software\Classes\.psd";  ValueType: string; ValueName: ""; ValueData: "Pix42.PsdFile";  Flags: uninsdeletevalue; Tasks: assoc_psd
 
-; ── Context menu "Open with Luma Viewer" (appears on all file types) ─────────
+; ── Context menu "Open with Pix42" (appears on all file types) ───────────────
 ; Uses HKLM\Software\Classes\*\shell which Windows merges into HKCR\*\shell.
-Root: HKA; Subkey: "Software\Classes\*\shell\LumaViewer"; \
-    ValueType: string; ValueName: "";      ValueData: "Open with Luma Viewer"; Flags: uninsdeletekey; Tasks: contextmenu
-Root: HKA; Subkey: "Software\Classes\*\shell\LumaViewer"; \
+Root: HKA; Subkey: "Software\Classes\*\shell\Pix42"; \
+    ValueType: string; ValueName: "";      ValueData: "Open with Pix42"; Flags: uninsdeletekey; Tasks: contextmenu
+Root: HKA; Subkey: "Software\Classes\*\shell\Pix42"; \
     ValueType: string; ValueName: "Icon"; ValueData: "{app}\{#AppExeName},0"; Tasks: contextmenu
-Root: HKA; Subkey: "Software\Classes\*\shell\LumaViewer\command"; \
+Root: HKA; Subkey: "Software\Classes\*\shell\Pix42\command"; \
     ValueType: string; ValueName: "";      ValueData: """{app}\{#AppExeName}"" ""%1"""; Tasks: contextmenu
 
 ; ---------------------------------------------------------------------------

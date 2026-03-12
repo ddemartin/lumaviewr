@@ -1,4 +1,4 @@
-# Luma Viewer
+# Pix42
 
 A fast, modern image and media viewer built with PySide6.
 

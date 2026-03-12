@@ -1,4 +1,4 @@
-"""Entry point — run with: python -m Luma  OR  python main.py [image_path]"""
+"""Entry point — run with: python -m Pix42  OR  python main.py [image_path]"""
 from __future__ import annotations
 
 import sys
@@ -47,8 +47,8 @@ def main() -> int:
         return 0
 
     # This is the primary instance — hand off to the full app.
-    from app import LumaApp
-    app = LumaApp(argv, single_instance=si, start_in_tray=start_in_tray)
+    from app import Pix42App
+    app = Pix42App(argv, single_instance=si, start_in_tray=start_in_tray)
     return app.run(open_path)
 
 

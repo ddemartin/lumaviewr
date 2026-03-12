@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-class LumaApp:
+class Pix42App:
     """
     Thin wrapper around QApplication.
 
@@ -45,12 +45,12 @@ class LumaApp:
             level=getattr(logging, self._cfg.log_level, logging.INFO),
             log_file=self._cfg.data_dir / "viewer.log",
         )
-        log.info("Starting Luma Viewer")
+        log.info("Starting Pix42")
 
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
         self._qapp = QApplication.instance() or QApplication(argv)
-        self._qapp.setApplicationName("Luma Viewer")
-        self._qapp.setOrganizationName("LumaViewer")
+        self._qapp.setApplicationName("Pix42")
+        self._qapp.setOrganizationName("Pix42")
         self._qapp.setStyle("Fusion")
 
         from utils.settings_manager import SettingsManager as _SM
@@ -70,7 +70,7 @@ class LumaApp:
 
         from ui.main_window import MainWindow
         self._window = MainWindow()
-        self._window._app = self  # back-reference so Settings dialog can reach LumaApp
+        self._window._app = self  # back-reference so Settings dialog can reach Pix42App
         # Apply theme to window widgets (GridView, MetadataPanel, etc.) now that they exist
         self._window.apply_theme(_saved_theme)
 

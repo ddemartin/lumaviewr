@@ -7,7 +7,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 class SingleInstance(QObject):
     """
-    Ensures only one Luma process acts as the 'primary' window.
+    Ensures only one Pix42 process acts as the 'primary' window.
 
     Usage
     -----
@@ -23,7 +23,7 @@ class SingleInstance(QObject):
 
     file_open_requested = Signal(str)
 
-    PIPE_NAME = "LumaViewer"
+    PIPE_NAME = "Pix42"
 
     # ------------------------------------------------------------------ #
 

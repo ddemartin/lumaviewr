@@ -43,6 +43,17 @@ from utils.settings_manager import SettingsManager
 log = logging.getLogger(__name__)
 
 
+def _default_pictures_dir() -> Optional[Path]:
+    import os
+    for env in ("USERPROFILE", "HOME"):
+        base = os.environ.get(env)
+        if base:
+            p = Path(base) / "Pictures"
+            if p.is_dir():
+                return p
+    return None
+
+
 _ALWAYS_ANIMATED = frozenset((".gif",))
 
 _CROPPABLE_SUFFIXES = frozenset({
@@ -725,7 +736,7 @@ class MainWindow(QMainWindow):
         self._watcher_timer.setInterval(500)
         self._watcher_timer.timeout.connect(self._apply_folder_changes)
 
-        self.setWindowTitle("Luma Viewer")
+        self.setWindowTitle("Pix42")
         self.resize(1280, 800)
         self._build_ui()
         self._build_menus()
@@ -764,7 +775,7 @@ class MainWindow(QMainWindow):
         if self._settings.start_fullscreen:
             self.showFullScreen()
 
-        last_folder = self._settings.last_folder
+        last_folder = self._settings.last_folder or _default_pictures_dir()
         if last_folder:
             log.info("Restoring last folder: %s", last_folder)
             self._folder_model.load_folder(last_folder)
@@ -1043,7 +1054,7 @@ class MainWindow(QMainWindow):
 
         # Help
         help_menu = mb.addMenu("&Help")
-        self._about_act = QAction("&About Luma…", self)
+        self._about_act = QAction("&About Pix42…", self)
         self._about_act.triggered.connect(self._show_about)
         help_menu.addAction(self._about_act)
 

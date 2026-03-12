@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from utils.settings_manager import SettingsManager
 
 if TYPE_CHECKING:
-    from app import LumaApp
+    from app import Pix42App
 
 def _make_style(theme: str) -> str:
     if theme == "light":
@@ -129,7 +129,7 @@ class SettingsDialog(QDialog):
         settings: SettingsManager,
         viewer,
         parent=None,
-        app: "Optional[LumaApp]" = None,
+        app: "Optional[Pix42App]" = None,
     ) -> None:
         super().__init__(parent)
         self._settings = settings
@@ -305,7 +305,7 @@ class SettingsDialog(QDialog):
         self._close_to_tray_cb.toggled.connect(self._on_tray_toggled)
         layout.addWidget(self._close_to_tray_cb)
 
-        self._run_at_startup_cb = QCheckBox("Launch Luma at Windows startup (minimised to tray)")
+        self._run_at_startup_cb = QCheckBox("Launch Pix42 at Windows startup (minimised to tray)")
         self._run_at_startup_cb.setChecked(self._orig_run_at_startup)
         self._run_at_startup_cb.setEnabled(self._orig_close_to_tray)
         layout.addWidget(self._run_at_startup_cb)
@@ -313,7 +313,7 @@ class SettingsDialog(QDialog):
         if sys.platform != "win32":
             self._run_at_startup_cb.setVisible(False)
 
-        note = QLabel("When enabled, Luma stays loaded in memory so files open instantly.")
+        note = QLabel("When enabled, Pix42 stays loaded in memory so files open instantly.")
         note.setObjectName("note")
         note.setWordWrap(True)
         layout.addWidget(note)

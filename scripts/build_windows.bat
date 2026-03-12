@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ====================================
-echo  Building Luma Viewer for Windows
+echo  Building Pix42 for Windows
 echo ====================================
 echo.
 
@@ -35,9 +35,9 @@ if errorlevel 1 (
 )
 
 REM --- 4. Build executable with PyInstaller ---
-echo [3/4] Building Luma.exe with PyInstaller...
+echo [3/4] Building Pix42.exe with PyInstaller...
 echo.
-pyinstaller "%SCRIPTS_DIR%Luma.spec" ^
+pyinstaller "%SCRIPTS_DIR%Pix42.spec" ^
     --distpath "%OUTPUT_DIR%\dist" ^
     --workpath "%SCRIPTS_DIR%work"
 
@@ -47,7 +47,7 @@ if errorlevel 1 (
     pause & exit /b 1
 )
 echo.
-echo Executable ready: %OUTPUT_DIR%\dist\Luma\Luma.exe
+echo Executable ready: %OUTPUT_DIR%\dist\Pix42\Pix42.exe
 
 REM --- 5. Build installer with Inno Setup (optional) ---
 echo [4/4] Building installer...
@@ -61,11 +61,11 @@ if defined ISCC (
         echo ERROR: Inno Setup compilation failed.
         pause & exit /b 1
     )
-    echo Installer: %OUTPUT_DIR%\LumaViewer-0.1.0-Setup-Windows_x64.exe
+    echo Installer: %OUTPUT_DIR%\Pix42-0.1.0-Setup-Windows_x64.exe
 ) else (
     echo Inno Setup 6 not found -- skipping installer creation.
     echo Get it at: https://jrsoftware.org/isinfo.php
-    echo Executable folder: %OUTPUT_DIR%\dist\Luma\
+    echo Executable folder: %OUTPUT_DIR%\dist\Pix42\
 )
 
 echo.
