@@ -41,9 +41,9 @@ def main() -> int:
     from utils.single_instance import SingleInstance
     si = SingleInstance()
     if not si.try_become_primary():
-        # Another instance is already running — hand off the path and exit.
-        if open_path:
-            si.send_to_primary(str(open_path))
+        # Another instance is already running — bring it to the foreground,
+        # optionally passing a file path to open.
+        si.send_to_primary(str(open_path) if open_path else "__show__")
         return 0
 
     # This is the primary instance — hand off to the full app.
