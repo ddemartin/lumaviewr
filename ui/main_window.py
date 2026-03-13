@@ -934,7 +934,6 @@ class MainWindow(QMainWindow):
         sl.addWidget(self._search_clear_btn)
         sl.addWidget(self._search_count_lbl)
         self._search_bar = search_bar
-        search_bar.hide()
         left_layout.addWidget(search_bar)
 
         self._grid = GridView(self._folder_model, left)
@@ -1702,13 +1701,8 @@ class MainWindow(QMainWindow):
             return
         if not self._left_panel.isVisible():
             self._left_panel.show()
-        if self._search_bar.isHidden():
-            self._search_bar.show()
-            self._search_edit.setFocus()
-            self._search_edit.selectAll()
-        else:
-            self._clear_search()
-            self._search_bar.hide()
+        self._search_edit.setFocus()
+        self._search_edit.selectAll()
 
     def _clear_search(self) -> None:
         self._search_edit.blockSignals(True)
@@ -1716,6 +1710,9 @@ class MainWindow(QMainWindow):
         self._search_edit.blockSignals(False)
         self._apply_search_filter("")
         self._search_count_lbl.setText("")
+        # Restore scroll position to the currently viewed image
+        if self._current_handle is not None:
+            self._grid.select_path(self._current_handle.path)
 
     def _on_search_text_changed(self, text: str) -> None:
         self._apply_search_filter(text)
