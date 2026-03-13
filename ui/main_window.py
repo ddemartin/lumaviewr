@@ -1094,6 +1094,10 @@ class MainWindow(QMainWindow):
 
         # Help
         help_menu = mb.addMenu("&Help")
+        self._check_updates_act = QAction("Check for &Updates…", self)
+        self._check_updates_act.triggered.connect(self._on_check_for_updates)
+        help_menu.addAction(self._check_updates_act)
+        help_menu.addSeparator()
         self._about_act = QAction("&About Pix42…", self)
         self._about_act.triggered.connect(self._show_about)
         help_menu.addAction(self._about_act)
@@ -1191,6 +1195,7 @@ class MainWindow(QMainWindow):
         more_menu.addSeparator()
         more_menu.addAction(self._settings_act)
         more_menu.addSeparator()
+        more_menu.addAction(self._check_updates_act)
         more_menu.addAction(self._about_act)
         more_menu.addSeparator()
         more_menu.addAction(self._quit_act)
@@ -2675,6 +2680,10 @@ class MainWindow(QMainWindow):
                 entry = self._folder_model.current
                 if entry:
                     self._grid.select_path(entry.path)
+
+    def _on_check_for_updates(self) -> None:
+        if hasattr(self, "_app"):
+            self._app.check_for_updates()
 
     def _show_about(self) -> None:
         dlg = AboutDialog(self)

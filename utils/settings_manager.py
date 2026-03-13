@@ -229,6 +229,20 @@ class SettingsManager:
         self._s.sync()
 
     # ------------------------------------------------------------------ #
+    # Updates                                                              #
+    # ------------------------------------------------------------------ #
+
+    @property
+    def last_update_check(self) -> str:
+        """ISO date string (YYYY-MM-DD) of the last update check, or empty string."""
+        return self._s.value("updates/last_check", "")
+
+    @last_update_check.setter
+    def last_update_check(self, value: str) -> None:
+        self._s.setValue("updates/last_check", value)
+        self._s.sync()
+
+    # ------------------------------------------------------------------ #
     # System / daemon                                                      #
     # ------------------------------------------------------------------ #
 

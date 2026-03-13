@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThreadPool
+from PySide6.QtCore import Qt, QThreadPool, QTimer
 from PySide6.QtWidgets import QApplication
 
 from config import config, AppConfig, ASSETS_DIR
@@ -89,6 +89,19 @@ class Pix42App:
 
         self._start_in_tray = start_in_tray
 
+        # ------------------------------------------------------------------ #
+        # Update checker                                                       #
+        # ------------------------------------------------------------------ #
+        try:
+            from __init__ import __version__ as _app_version
+        except ImportError:
+            _app_version = "0.0.0"
+        from utils.update_checker import UpdateChecker
+        self._update_checker = UpdateChecker(_app_version, parent=self._qapp)
+        self._update_checker.update_available.connect(self._on_update_available)
+        self._update_checker.up_to_date.connect(self._on_up_to_date)
+        self._update_checker.check_error.connect(self._on_update_check_error)
+
     # ------------------------------------------------------------------ #
     # Public                                                               #
     # ------------------------------------------------------------------ #
@@ -105,6 +118,9 @@ class Pix42App:
             self._window.open_path(open_path)
             if self._start_in_tray:
                 self._show_window()
+
+        # Schedule the weekly update check 3 s after startup (non-blocking)
+        QTimer.singleShot(3000, self._update_checker.check_if_due)
 
         ret = self._qapp.exec()
         # Give active workers (e.g. in-flight ffmpeg subprocesses) up to 3 s
@@ -170,6 +186,41 @@ class Pix42App:
     # ------------------------------------------------------------------ #
     # IPC                                                                  #
     # ------------------------------------------------------------------ #
+
+    def check_for_updates(self) -> None:
+        """Trigger a manual update check (called from the UI)."""
+        self._update_checker.check_now()
+
+    def _on_update_available(self, latest_version: str, download_url: str) -> None:
+        try:
+            from __init__ import __version__ as _app_version
+        except ImportError:
+            _app_version = ""
+        from ui.update_dialog import UpdateDialog
+        dlg = UpdateDialog(latest_version, download_url, _app_version, self._window)
+        dlg.show()
+
+    def _on_up_to_date(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        msg = QMessageBox(self._window)
+        msg.setWindowTitle("Check for Updates")
+        msg.setText("You're up to date!")
+        try:
+            from __init__ import __version__ as v
+            msg.setInformativeText(f"Pix42 {v} is the latest version.")
+        except ImportError:
+            pass
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.exec()
+
+    def _on_update_check_error(self, error: str) -> None:
+        from PySide6.QtWidgets import QMessageBox
+        msg = QMessageBox(self._window)
+        msg.setWindowTitle("Check for Updates")
+        msg.setText("Could not check for updates.")
+        msg.setInformativeText(error)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.exec()
 
     def _on_ipc_open(self, path_str: str) -> None:
         path = Path(path_str)
