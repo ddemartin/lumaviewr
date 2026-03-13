@@ -1734,6 +1734,7 @@ class MainWindow(QMainWindow):
 
     def _apply_search_filter(self, text: str) -> None:
         self._grid.set_filter(text)
+        self._grid.set_search_text(text)
         self._expanded_overlay.set_filter(text)
         vis, total = self._grid._thumb_model.filter_stats
         self._update_search_count(vis, total)

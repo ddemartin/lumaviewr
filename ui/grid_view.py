@@ -7,7 +7,7 @@ from typing import Optional
 from PySide6.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QSize, QRect, Signal, QTimer, QPoint,
 )
-from PySide6.QtGui import QImage, QColor, QPainter, QFont, QPen, QMouseEvent
+from PySide6.QtGui import QImage, QColor, QPainter, QFont, QFontMetrics, QPen, QMouseEvent
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QLineEdit, QListView, QStyle,
     QStyledItemDelegate, QStyleOptionViewItem, QWidget,
@@ -178,9 +178,13 @@ class ThumbnailDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self._extra_selected = extra_selected
         self._theme = "dark"
+        self._search_text = ""
 
     def set_theme(self, theme: str) -> None:
         self._theme = theme
+
+    def set_search_text(self, text: str) -> None:
+        self._search_text = text.strip()
 
     def paint(
         self,
@@ -229,10 +233,9 @@ class ThumbnailDelegate(QStyledItemDelegate):
         name: str = index.data(Qt.ItemDataRole.DisplayRole) or ""
         if len(name) > 18:
             name = name[:16] + "…"
-        painter.setPen(QColor(200, 200, 200))
         painter.setFont(QFont("sans-serif", 8))
         label_rect = QRect(rect.x(), rect.y() + rect.height() - 18, rect.width(), 18)
-        painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, name)
+        self._draw_label(painter, label_rect, name)
 
         # Checkmark badge for extra-selected items
         if is_extra:
@@ -248,6 +251,43 @@ class ThumbnailDelegate(QStyledItemDelegate):
             painter.drawLine(cx - 1, cy + 3, cx + 4, cy - 2)
 
         painter.restore()
+
+    def _draw_label(self, painter: QPainter, rect: QRect, name: str) -> None:
+        """Draw the filename label, highlighting any search match."""
+        fg = QColor(200, 200, 200) if self._theme == "dark" else QColor(30, 30, 30)
+        st = self._search_text.lower()
+        pos = name.lower().find(st) if st else -1
+
+        if pos < 0:
+            painter.setPen(fg)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, name)
+            return
+
+        fm = QFontMetrics(painter.font())
+        total_w = fm.horizontalAdvance(name)
+        x = rect.x() + (rect.width() - total_w) // 2
+        text_h = fm.height()
+        y_top = rect.y() + (rect.height() - text_h) // 2
+        baseline = y_top + fm.ascent()
+
+        pre   = name[:pos]
+        match = name[pos : pos + len(st)]
+        post  = name[pos + len(st):]
+
+        if pre:
+            painter.setPen(fg)
+            painter.drawText(x, baseline, pre)
+            x += fm.horizontalAdvance(pre)
+
+        match_w = fm.horizontalAdvance(match)
+        painter.fillRect(QRect(x - 1, y_top, match_w + 2, text_h), QColor(255, 195, 40, 210))
+        painter.setPen(QColor(20, 20, 20))
+        painter.drawText(x, baseline, match)
+        x += match_w
+
+        if post:
+            painter.setPen(fg)
+            painter.drawText(x, baseline, post)
 
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
@@ -389,6 +429,11 @@ class GridView(QListView):
             if entry and not entry.is_dir:
                 paths.append(entry.path)
         return paths
+
+    def set_search_text(self, text: str) -> None:
+        """Update the search highlight in the delegate and repaint."""
+        self._delegate.set_search_text(text)
+        self.viewport().update()
 
     def set_filter(self, text: str) -> None:
         """Apply filename/metadata filter and emit updated stats."""
