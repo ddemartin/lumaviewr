@@ -78,7 +78,9 @@ python main.py path/to/file
 
 - **Two-pass progressive loading** — fast preview followed by full-resolution decode
 - **Pan & zoom** — mouse drag, scroll wheel, keyboard shortcuts
-- **Filmstrip** — thumbnail strip with background parallel loading and prefetch
+- **Filmstrip** — thumbnail strip with background parallel loading and prefetch; open/closed state and width remembered between sessions
+- **Filmstrip recursive mode** — optionally show all images from the current folder and all its subdirectories (flat list)
+- **Folder navigation** — go to parent folder or next sibling folder directly from the strip
 - **Navigator minimap** — shows the visible viewport over the full image
 - **Animated GIF / WebP** — frame-accurate playback with pan/zoom
 - **Media player** — video and audio with play, pause, stop, seek, volume
@@ -86,7 +88,7 @@ python main.py path/to/file
 - **FITS auto-stretch** — linear/asinh stretch with optional GPU acceleration (CuPy)
 - **Move to Trash** — right-click context menu or Delete key
 - **Stretch small images** toggle (View menu, shortcut `S`) — persistent across sessions
-- **Session restore** — remembers last folder, window geometry, splitter position
+- **Session restore** — remembers last folder, last viewed image, window geometry, splitter and filmstrip state
 
 ### Keyboard shortcuts
 
@@ -120,4 +122,4 @@ python main.py path/to/file
 
 ---
 
-© 2026 De Martin Davide — [www.demahub.com](https://www.demahub.com)
+© 2026 De Martin Davide — [www.demahub.com](https://www.demahub.com) — ddemartin@gmail.com
