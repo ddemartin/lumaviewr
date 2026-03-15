@@ -748,11 +748,76 @@ class MainWindow(QMainWindow):
     # Session save / restore                                               #
     # ------------------------------------------------------------------ #
 
+    # ------------------------------------------------------------------ #
+    # Sort                                                                 #
+    # ------------------------------------------------------------------ #
+
+    def _build_sort_menu(self) -> "QMenu":
+        from PySide6.QtGui import QAction
+        from models.folder_model import SortKey
+        menu = QMenu(self)
+        _ITEMS = [
+            ("Name A → Z",      SortKey.NAME,      False),
+            ("Name Z → A",      SortKey.NAME,      True),
+            (None, None, None),
+            ("Date newest first", SortKey.DATE,    True),
+            ("Date oldest first", SortKey.DATE,    False),
+            (None, None, None),
+            ("Size largest first", SortKey.SIZE,   True),
+            ("Size smallest first", SortKey.SIZE,  False),
+            (None, None, None),
+            ("Type (extension)", SortKey.EXTENSION, False),
+        ]
+        self._sort_actions: list = []
+        for label, key, rev in _ITEMS:
+            if label is None:
+                menu.addSeparator()
+                continue
+            act = QAction(label, self)
+            act.setCheckable(True)
+            act.triggered.connect(lambda _=False, k=key, r=rev: self._apply_sort(k, r))
+            menu.addAction(act)
+            self._sort_actions.append((act, key, rev))
+        return menu
+
+    def _apply_sort(self, key: "SortKey", reverse: bool) -> None:
+        from models.folder_model import SortKey
+        self._folder_model.set_sort(key, reverse)
+        self._settings.sort_key = key.value
+        self._settings.sort_reverse = reverse
+        self._update_sort_checkmarks(key, reverse)
+        current = self._folder_model.current
+        self._grid.refresh()
+        self._thumbnails_loaded = False
+        if current:
+            self._grid.select_path(current.path)
+            self._start_thumbnails_if_needed()
+
+    def _update_sort_checkmarks(self, key: "SortKey", reverse: bool) -> None:
+        for act, k, r in self._sort_actions:
+            act.setChecked(k == key and r == reverse)
+
+    def _restore_sort(self) -> None:
+        from models.folder_model import SortKey
+        try:
+            key = SortKey(self._settings.sort_key)
+        except ValueError:
+            key = SortKey.NAME
+        rev = self._settings.sort_reverse
+        self._folder_model.set_sort(key, rev)
+        self._update_sort_checkmarks(key, rev)
+
+    # ------------------------------------------------------------------ #
+    # Session                                                              #
+    # ------------------------------------------------------------------ #
+
     def _restore_session(self) -> None:
         """Restore window geometry and last open folder from settings.ini."""
         geom = self._settings.load_geometry()
         if geom:
             self.restoreGeometry(geom)
+
+        self._restore_sort()
 
         stretch = self._settings.stretch_small
         self._stretch_act.setChecked(stretch)
@@ -888,8 +953,20 @@ class MainWindow(QMainWindow):
         self._nav_expand_btn.setIconSize(QSize(20, 20))
         self._nav_expand_btn.setFixedSize(28, 28)
         self._nav_expand_btn.setToolTip("Open full-window thumbnail browser")
+
+        self._sort_btn = QPushButton("⇅")
+        self._sort_btn.setFixedSize(28, 28)
+        self._sort_btn.setToolTip("Sort order")
+        self._sort_btn.setStyleSheet(
+            "QPushButton { background: transparent; color: #aaa; border: none; font-size: 14px; }"
+            "QPushButton:hover { color: #fff; }"
+        )
+        self._sort_menu = self._build_sort_menu()
+        self._sort_btn.setMenu(self._sort_menu)
+
         nav_layout.addWidget(self._nav_up_btn)
         nav_layout.addWidget(self._nav_label, stretch=1)
+        nav_layout.addWidget(self._sort_btn)
         nav_layout.addWidget(self._nav_expand_btn)
         left_layout.addWidget(nav_bar)
 

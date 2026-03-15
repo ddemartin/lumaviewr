@@ -164,10 +164,15 @@ class ThumbnailModel(QAbstractListModel):
                     pass  # item not visible (filtered out)
                 return
 
+    def set_theme(self, theme: str) -> None:
+        self._placeholder = self._make_placeholder(theme)
+        self.beginResetModel()
+        self.endResetModel()
+
     @staticmethod
-    def _make_placeholder() -> QImage:
+    def _make_placeholder(theme: str = "dark") -> QImage:
         img = QImage(THUMB_SIZE, THUMB_SIZE, QImage.Format.Format_RGB32)
-        img.fill(QColor(50, 50, 50))
+        img.fill(QColor(50, 50, 50) if theme != "light" else QColor(210, 210, 210))
         return img
 
 
@@ -200,12 +205,13 @@ class ThumbnailDelegate(QStyledItemDelegate):
         is_selected = bool(option.state & option.state.State_Selected)
         is_extra = entry is not None and not entry.is_dir and entry.path in self._extra_selected
 
+        dark = self._theme != "light"
         if is_dir:
-            bg_color = QColor(70, 120, 190) if is_selected else QColor(42, 42, 52)
+            bg_color = QColor(70, 120, 190) if is_selected else (QColor(42, 42, 52) if dark else QColor(195, 210, 235))
         elif is_extra:
-            bg_color = QColor(50, 90, 50)  # green tint for extra-selected
+            bg_color = QColor(50, 90, 50) if dark else QColor(140, 200, 140)
         else:
-            bg_color = QColor(60, 110, 180) if is_selected else QColor(35, 35, 35)
+            bg_color = QColor(60, 110, 180) if is_selected else (QColor(35, 35, 35) if dark else QColor(225, 225, 225))
         painter.fillRect(rect, bg_color)
 
         if is_dir:
@@ -402,6 +408,7 @@ class GridView(QListView):
     def apply_theme(self, theme: str) -> None:
         self._theme = theme
         self._delegate.set_theme(theme)
+        self._thumb_model.set_theme(theme)
         bg = "#f5f5f5" if theme == "light" else "#1e1e1e"
         self.setStyleSheet(f"background: {bg}; border: none;")
 

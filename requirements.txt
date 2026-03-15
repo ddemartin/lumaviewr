@@ -13,6 +13,9 @@ numpy>=1.26.0
 # Optional — PSD support
 psd-tools>=1.9.0
 
+# Optional — HEIC/HEIF support
+pillow-heif>=0.16.0
+
 # Optional — memory stats
 psutil>=5.9.0
 

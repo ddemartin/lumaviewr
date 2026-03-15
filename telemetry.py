@@ -42,6 +42,8 @@ _EXT_TO_FORMAT: dict[str, str] = {
     ".ico": "ico",
     ".ppm": "ppm", ".pgm": "ppm", ".pbm": "ppm",
     ".psd": "psd",
+    ".svg": "svg", ".svgz": "svg",
+    ".heic": "heif", ".heif": "heif", ".hif": "heif", ".avci": "heif", ".avcs": "heif",
     ".fit": "fits", ".fits": "fits", ".fts": "fits",
     ".cr2": "raw", ".cr3": "raw", ".nef": "raw", ".nrw": "raw",
     ".arw": "raw", ".srf": "raw", ".sr2": "raw", ".rw2": "raw",

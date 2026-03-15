@@ -13,6 +13,8 @@ from .decoder_pillow import PillowDecoder
 from .decoder_psd import PsdDecoder
 from .decoder_raw import RawDecoder
 from .decoder_fits import FitsDecoder
+from .decoder_heif import HeifDecoder
+from .decoder_svg import SvgDecoder
 from .decoder_video import VideoDecoder
 from .memory_estimator import MemoryEstimator
 from .large_image_strategy import LargeImageStrategy, LoadMode, TiledImageProvider
@@ -49,6 +51,8 @@ class ImageLoader:
         FitsDecoder,
         RawDecoder,
         PsdDecoder,
+        HeifDecoder,
+        SvgDecoder,
         PillowDecoder,
         VideoDecoder,
     ]

@@ -162,6 +162,24 @@ class SettingsManager:
     # ------------------------------------------------------------------ #
 
     @property
+    def sort_key(self) -> str:
+        return self._s.value("behavior/sort_key", "name")
+
+    @sort_key.setter
+    def sort_key(self, value: str) -> None:
+        self._s.setValue("behavior/sort_key", value)
+        self._s.sync()
+
+    @property
+    def sort_reverse(self) -> bool:
+        return self._s.value("behavior/sort_reverse", False, type=bool)
+
+    @sort_reverse.setter
+    def sort_reverse(self, value: bool) -> None:
+        self._s.setValue("behavior/sort_reverse", value)
+        self._s.sync()
+
+    @property
     def confirm_delete_file(self) -> bool:
         return self._s.value("behavior/confirm_delete_file", True, type=bool)
 
