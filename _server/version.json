@@ -2,5 +2,5 @@
     "version": "1.0.0",
     "release_date": "2026-03-13",
     "download_url": "https://www.demahub.com/pix42/download",
-    "changelog": "Initial release."
+    "changelog": "Added SVG and HEIC/HEIF image support. Added sort by name, date, size, and type. Thumbnail generation now starts from the current image outward for faster loading. Fixed light theme background in the filmstrip."
 }
