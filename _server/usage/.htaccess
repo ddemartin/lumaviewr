@@ -1,0 +1,71 @@
+# FITS Liberator 5 - Telemetry Endpoint Security
+# Blocks public access to telemetry data and analytics endpoint
+# Deploy this file to: /public_html/fits-liberator-5/usage/.htaccess
+
+# ==============================================================================
+# BLOCK DIRECT ACCESS TO ANALYTICS ENDPOINT (only allow POST from app)
+# ==============================================================================
+
+<Files "analytics.php">
+    # Block all methods EXCEPT POST
+    <LimitExcept POST>
+        Order Deny,Allow
+        Deny from all
+    </LimitExcept>
+</Files>
+
+# ==============================================================================
+# PROTECT TELEMETRY DATA FILES
+# ==============================================================================
+
+# Block access to all .jsonl data files
+<FilesMatch "\.(jsonl|json|log|txt|csv)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Block access to README and documentation
+<FilesMatch "^README.*$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# ==============================================================================
+# GENERAL SECURITY
+# ==============================================================================
+
+# Disable directory listing
+Options -Indexes
+
+# Deny access to .htaccess itself
+<Files ".htaccess">
+    Order Deny,Allow
+    Deny from all
+</Files>
+
+# ==============================================================================
+# RATE LIMITING (if mod_ratelimit is available on Aruba)
+# ==============================================================================
+
+<IfModule mod_ratelimit.c>
+    <Files "analytics.php">
+        SetOutputFilter RATE_LIMIT
+        # Limit to 100 KB/s (prevents DoS)
+        SetEnv rate-limit 100
+    </Files>
+</IfModule>
+
+# ==============================================================================
+# ADDITIONAL SECURITY HEADERS
+# ==============================================================================
+
+<IfModule mod_headers.c>
+    # Prevent MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+
+    # Prevent clickjacking
+    Header set X-Frame-Options "DENY"
+
+    # Disable referrer for privacy
+    Header set Referrer-Policy "no-referrer"
+</IfModule>

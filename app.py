@@ -98,6 +98,11 @@ class Pix42App:
             _app_version = "0.0.0"
         from utils.update_checker import UpdateChecker
         self._update_checker = UpdateChecker(_app_version, parent=self._qapp)
+
+        # Telemetry
+        self._app_version = _app_version
+        import telemetry
+        telemetry.init_telemetry(_app_version)
         self._update_checker.update_available.connect(self._on_update_available)
         self._update_checker.up_to_date.connect(self._on_up_to_date)
         self._update_checker.check_error.connect(self._on_update_check_error)
@@ -126,6 +131,10 @@ class Pix42App:
         # Give active workers (e.g. in-flight ffmpeg subprocesses) up to 3 s
         # to finish, then return anyway so the Python process can exit cleanly.
         QThreadPool.globalInstance().waitForDone(3000)
+
+        import telemetry
+        telemetry.cleanup_telemetry(self._app_version)
+
         return ret
 
     # ------------------------------------------------------------------ #

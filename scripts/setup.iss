@@ -7,7 +7,7 @@
 ;      (Inkscape CLI: inkscape icon.svg -o icon.ico  -- or any online tool)
 
 #define AppName      "Pix42"
-#define AppVersion   "0.2.0"
+#define AppVersion   "1.0.0"
 #define AppPublisher "DemaHub"
 #define AppExeName   "Pix42.exe"
 #define AppId        "{{C4F8A2E1-7B3D-4F5C-9A12-8E6D3F7B1C4A}"

@@ -103,6 +103,12 @@ class ImageLoader:
                 tile_size=decoder.preferred_tile_size(),
             )
 
+        try:
+            import telemetry
+            telemetry.track_file_viewed(path.suffix, str(path))
+        except Exception:
+            pass
+
         return ImageHandle(
             path=path,
             metadata=metadata,
