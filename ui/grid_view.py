@@ -388,12 +388,16 @@ class GridView(QListView):
         # Bubble rename signals from the model
         self._thumb_model.rename_done.connect(self.rename_done)
         self._thumb_model.rename_error.connect(self.rename_failed)
-        # Debounced scroll → scroll_changed
+        # Debounced scroll → scroll_changed (triggered via scrollContentsBy override)
         self._scroll_timer = QTimer(self)
         self._scroll_timer.setSingleShot(True)
         self._scroll_timer.setInterval(150)
         self._scroll_timer.timeout.connect(self.scroll_changed)
-        self.verticalScrollBar().valueChanged.connect(self._scroll_timer.start)
+
+    def scrollContentsBy(self, dx: int, dy: int) -> None:
+        """Called by Qt on every scroll; debounce → scroll_changed."""
+        super().scrollContentsBy(dx, dy)
+        self._scroll_timer.start(150)
 
     def apply_theme(self, theme: str) -> None:
         self._theme = theme
@@ -415,8 +419,15 @@ class GridView(QListView):
     def get_visible_paths(self) -> list[Path]:
         """Return paths of image entries currently visible in the viewport."""
         vp = self.viewport().rect()
+        mid_x = vp.width() // 2
         tl = self.indexAt(vp.topLeft() + QPoint(1, 1))
         br = self.indexAt(vp.bottomRight() - QPoint(1, 1))
+        # In narrow single-column layouts the right/bottom edge falls outside
+        # any item; fall back to the horizontal centre of the viewport.
+        if not br.isValid():
+            br = self.indexAt(QPoint(mid_x, vp.bottom() - 1))
+        if not tl.isValid():
+            tl = self.indexAt(QPoint(mid_x, vp.top() + 1))
         first = tl.row() if tl.isValid() else 0
         last  = br.row() if br.isValid() else self._thumb_model.rowCount() - 1
         # Clamp and include a small buffer row above/below

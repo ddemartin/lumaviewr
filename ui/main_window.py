@@ -1473,7 +1473,7 @@ class MainWindow(QMainWindow):
             self._load_folder_thumbnails()
 
     def _load_folder_thumbnails(self) -> None:
-        """Build the priority queue (visible rows first) and kick off initial workers."""
+        """Build the priority queue center-out from the current image."""
         all_paths = [
             entry.path
             for entry in self._folder_model
@@ -1483,10 +1483,17 @@ class MainWindow(QMainWindow):
         if not all_paths:
             return
 
-        visible_set = set(self._grid.get_visible_paths())
-        priority = [p for p in all_paths if p in visible_set]
-        rest     = [p for p in all_paths if p not in visible_set]
-        self._thumb_queue = deque(priority + rest)
+        current = self._folder_model.current
+        if current is not None:
+            try:
+                path_to_idx = {p: i for i, p in enumerate(all_paths)}
+                center_idx = path_to_idx.get(current.path, 0)
+                ordered = sorted(all_paths, key=lambda p: abs(path_to_idx[p] - center_idx))
+                self._thumb_queue = deque(ordered)
+            except Exception:
+                self._thumb_queue = deque(all_paths)
+        else:
+            self._thumb_queue = deque(all_paths)
 
         for _ in range(self._thumb_pool.maxThreadCount()):
             self._dispatch_next_thumb()
@@ -1508,12 +1515,29 @@ class MainWindow(QMainWindow):
             return
 
     def _reprioritize_thumbnails(self) -> None:
-        """Move currently visible paths to the front of the pending queue."""
+        """Move visible paths to front; sort remaining by proximity to visible area."""
         if not self._thumb_queue:
             return
-        visible_set  = set(self._grid.get_visible_paths())
-        pending      = [p for p in self._thumb_queue if p not in visible_set]
-        front        = [p for p in self._thumb_queue if p in visible_set]
+        visible_paths = self._grid.get_visible_paths()
+        visible_set   = set(visible_paths)
+        front         = [p for p in self._thumb_queue if p in visible_set]
+        pending       = [p for p in self._thumb_queue if p not in visible_set]
+
+        if pending and visible_paths:
+            try:
+                all_paths = [
+                    entry.path for entry in self._folder_model
+                    if not entry.is_dir
+                    and entry.path.suffix.lower() not in _AUDIO_EXTENSIONS
+                ]
+                path_to_idx = {p: i for i, p in enumerate(all_paths)}
+                visible_indices = [path_to_idx[p] for p in visible_paths if p in path_to_idx]
+                if visible_indices:
+                    center_idx = sum(visible_indices) // len(visible_indices)
+                    pending.sort(key=lambda p: abs(path_to_idx.get(p, 0) - center_idx))
+            except Exception:
+                pass
+
         self._thumb_queue = deque(front + pending)
 
     def _on_thumbnail_ready(self, path: Path, image: QImage) -> None:

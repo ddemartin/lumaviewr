@@ -94,6 +94,10 @@ QPushButton#closeBtn:pressed { background: #555; }
 QFrame#divider {
     color: #333;
 }
+QLabel#privacyNote {
+    color: #666;
+    font-size: 10px;
+}
 """
 
 
@@ -101,7 +105,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("About Pix42")
-        self.setFixedSize(420, 560)
+        self.setFixedSize(420, 610)
         self.setModal(True)
         self.setStyleSheet(_STYLE)
         self._build_ui()
@@ -202,6 +206,32 @@ class AboutDialog(QDialog):
         div2.setObjectName("divider")
         div2.setFrameShape(QFrame.Shape.HLine)
         root.addWidget(div2)
+
+        root.addSpacing(10)
+
+        # Privacy notice
+        privacy_hdr = QLabel("Privacy")
+        privacy_hdr.setObjectName("sectionHeader")
+        root.addWidget(privacy_hdr)
+
+        root.addSpacing(6)
+
+        privacy_lbl = QLabel(
+            "Pix42 sends one anonymous ping per session to help improve the app. "
+            "It records: OS, language, screen resolution, session duration, and the "
+            "count of files viewed grouped by format. "
+            "No file names, paths, or personal data are ever collected."
+        )
+        privacy_lbl.setObjectName("privacyNote")
+        privacy_lbl.setWordWrap(True)
+        root.addWidget(privacy_lbl)
+
+        root.addSpacing(10)
+
+        div3 = QFrame()
+        div3.setObjectName("divider")
+        div3.setFrameShape(QFrame.Shape.HLine)
+        root.addWidget(div3)
 
         root.addSpacing(14)
 
