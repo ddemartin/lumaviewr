@@ -14,33 +14,39 @@ class SlideShowBar(QWidget):
     order_toggled        = Signal()   # cycle sequential ↔ random
     interval_changed     = Signal(int)  # new interval in seconds
 
-    _STYLE = """
-        QLabel {
-            color: #ccc;
-            font-size: 12px;
-            padding: 0 4px;
-        }
+    _STYLE_DARK = """
+        QLabel { color: #ccc; font-size: 12px; padding: 0 4px; }
         QPushButton {
-            background: rgba(60,60,60,220);
-            color: #ccc;
-            border: 1px solid #666;
-            border-radius: 4px;
-            padding: 4px 14px;
-            font-size: 12px;
-            min-width: 90px;
+            background: rgba(60,60,60,220); color: #ccc;
+            border: 1px solid #666; border-radius: 4px;
+            padding: 4px 14px; font-size: 12px; min-width: 90px;
         }
         QPushButton:hover   { background: rgba(90,90,90,240); color: #fff; }
         QPushButton:pressed { background: rgba(70,120,200,220); }
         QPushButton#btn_order { min-width: 110px; }
         QPushButton#btn_stop  { min-width: 70px; }
         QSpinBox {
-            background: rgba(50,50,50,220);
-            color: #ccc;
-            border: 1px solid #666;
-            border-radius: 4px;
-            padding: 2px 4px;
-            font-size: 12px;
-            min-width: 56px;
+            background: rgba(50,50,50,220); color: #ccc;
+            border: 1px solid #666; border-radius: 4px;
+            padding: 2px 4px; font-size: 12px; min-width: 56px;
+        }
+        QSpinBox::up-button, QSpinBox::down-button { width: 18px; }
+    """
+    _STYLE_LIGHT = """
+        QLabel { color: #333; font-size: 12px; padding: 0 4px; }
+        QPushButton {
+            background: rgba(200,200,200,220); color: #222;
+            border: 1px solid #aaa; border-radius: 4px;
+            padding: 4px 14px; font-size: 12px; min-width: 90px;
+        }
+        QPushButton:hover   { background: rgba(180,180,180,240); color: #000; }
+        QPushButton:pressed { background: rgba(70,120,200,220); color: #fff; }
+        QPushButton#btn_order { min-width: 110px; }
+        QPushButton#btn_stop  { min-width: 70px; }
+        QSpinBox {
+            background: rgba(240,240,240,220); color: #222;
+            border: 1px solid #aaa; border-radius: 4px;
+            padding: 2px 4px; font-size: 12px; min-width: 56px;
         }
         QSpinBox::up-button, QSpinBox::down-button { width: 18px; }
     """
@@ -49,6 +55,8 @@ class SlideShowBar(QWidget):
         super().__init__(parent)
         self._playing = False
         self._random  = False
+        self._bg_color = QColor(22, 22, 22, 220)
+        self._border_color = QColor(75, 75, 75)
 
         self._btn_play  = QPushButton("▶  Play", self)
         self._btn_stop  = QPushButton("⏹  Stop", self)
@@ -76,7 +84,7 @@ class SlideShowBar(QWidget):
         lay.addWidget(self._lbl_sec)
         lay.addWidget(self._spin)
 
-        self.setStyleSheet(self._STYLE)
+        self.setStyleSheet(self._STYLE_DARK)
 
         self._btn_play.clicked.connect(self._on_play_pause)
         self._btn_stop.clicked.connect(self.stop_requested)
@@ -126,8 +134,19 @@ class SlideShowBar(QWidget):
 
     # ------------------------------------------------------------------ #
 
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            self._bg_color = QColor(230, 230, 230, 240)
+            self._border_color = QColor(180, 180, 180)
+            self.setStyleSheet(self._STYLE_LIGHT)
+        else:
+            self._bg_color = QColor(22, 22, 22, 220)
+            self._border_color = QColor(75, 75, 75)
+            self.setStyleSheet(self._STYLE_DARK)
+        self.update()
+
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(22, 22, 22, 220))
-        p.setPen(QColor(75, 75, 75))
+        p.fillRect(self.rect(), self._bg_color)
+        p.setPen(self._border_color)
         p.drawRect(self.rect().adjusted(0, 0, -1, -1))

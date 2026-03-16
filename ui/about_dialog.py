@@ -21,94 +21,85 @@ _CREDITS = [
     ("CuPy",       "GPU-accelerated array operations (optional, requires CUDA)"),
 ]
 
-_STYLE = """
-QDialog {
-    background: #1e1e1e;
-}
-QLabel {
-    color: #ccc;
-    background: transparent;
-}
-QLabel#appName {
-    color: #fff;
-    font-size: 22px;
-    font-weight: bold;
-}
-QLabel#tagline {
-    color: #888;
-    font-size: 11px;
-}
-QLabel#copyright {
-    color: #777;
-    font-size: 11px;
-}
+def _make_style(theme: str) -> str:
+    if theme == "light":
+        return """
+QDialog { background: #f0f0f0; }
+QLabel { color: #222; background: transparent; }
+QLabel#appName { color: #111; font-size: 22px; font-weight: bold; }
+QLabel#tagline { color: #666; font-size: 11px; }
+QLabel#copyright { color: #777; font-size: 11px; }
 QLabel#sectionHeader {
-    color: #aaa;
-    font-size: 11px;
-    font-weight: bold;
-    border-bottom: 1px solid #333;
-    padding-bottom: 2px;
+    color: #555; font-size: 11px; font-weight: bold;
+    border-bottom: 1px solid #ccc; padding-bottom: 2px;
 }
-QLabel#depName {
-    color: #ddd;
-    font-size: 11px;
-    font-weight: bold;
-}
-QLabel#depDesc {
-    color: #888;
-    font-size: 11px;
-}
+QLabel#depName { color: #222; font-size: 11px; font-weight: bold; }
+QLabel#depDesc { color: #666; font-size: 11px; }
 QPushButton#linkBtn {
-    background: transparent;
-    color: #5a9fd4;
-    border: none;
-    font-size: 11px;
-    padding: 0;
-    text-align: left;
+    background: transparent; color: #1a6cb0; border: none;
+    font-size: 11px; padding: 0; text-align: left;
 }
-QPushButton#linkBtn:hover {
-    color: #7fbfff;
-    text-decoration: underline;
-}
+QPushButton#linkBtn:hover { color: #0050a0; text-decoration: underline; }
 QPushButton#coffeeBtn {
-    background: #ff5e5b;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: bold;
-    padding: 8px 18px;
+    background: #ff5e5b; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: bold; padding: 8px 18px;
 }
 QPushButton#coffeeBtn:hover  { background: #ff7a77; }
 QPushButton#coffeeBtn:pressed { background: #e04040; }
 QPushButton#closeBtn {
-    background: #333;
-    color: #ccc;
-    border: 1px solid #444;
-    border-radius: 6px;
-    font-size: 12px;
-    padding: 6px 18px;
+    background: #ddd; color: #222; border: 1px solid #bbb;
+    border-radius: 6px; font-size: 12px; padding: 6px 18px;
+}
+QPushButton#closeBtn:hover  { background: #ccc; color: #111; }
+QPushButton#closeBtn:pressed { background: #bbb; }
+QFrame#divider { color: #ccc; }
+QLabel#privacyNote { color: #888; font-size: 10px; }
+"""
+    return """
+QDialog { background: #1e1e1e; }
+QLabel { color: #ccc; background: transparent; }
+QLabel#appName { color: #fff; font-size: 22px; font-weight: bold; }
+QLabel#tagline { color: #888; font-size: 11px; }
+QLabel#copyright { color: #777; font-size: 11px; }
+QLabel#sectionHeader {
+    color: #aaa; font-size: 11px; font-weight: bold;
+    border-bottom: 1px solid #333; padding-bottom: 2px;
+}
+QLabel#depName { color: #ddd; font-size: 11px; font-weight: bold; }
+QLabel#depDesc { color: #888; font-size: 11px; }
+QPushButton#linkBtn {
+    background: transparent; color: #5a9fd4; border: none;
+    font-size: 11px; padding: 0; text-align: left;
+}
+QPushButton#linkBtn:hover { color: #7fbfff; text-decoration: underline; }
+QPushButton#coffeeBtn {
+    background: #ff5e5b; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: bold; padding: 8px 18px;
+}
+QPushButton#coffeeBtn:hover  { background: #ff7a77; }
+QPushButton#coffeeBtn:pressed { background: #e04040; }
+QPushButton#closeBtn {
+    background: #333; color: #ccc; border: 1px solid #444;
+    border-radius: 6px; font-size: 12px; padding: 6px 18px;
 }
 QPushButton#closeBtn:hover  { background: #444; color: #fff; }
 QPushButton#closeBtn:pressed { background: #555; }
-QFrame#divider {
-    color: #333;
-}
-QLabel#privacyNote {
-    color: #666;
-    font-size: 10px;
-}
+QFrame#divider { color: #333; }
+QLabel#privacyNote { color: #666; font-size: 10px; }
 """
 
 
 class AboutDialog(QDialog):
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, theme: str = "dark") -> None:
         super().__init__(parent)
         self.setWindowTitle("About Pix42")
         self.setFixedSize(420, 610)
         self.setModal(True)
-        self.setStyleSheet(_STYLE)
         self._build_ui()
+        self.apply_theme(theme)
+
+    def apply_theme(self, theme: str) -> None:
+        self.setStyleSheet(_make_style(theme))
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)

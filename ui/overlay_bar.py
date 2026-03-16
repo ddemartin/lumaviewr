@@ -4,11 +4,28 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtCore import Qt, QByteArray, QSize, QTimer, Signal, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QColor, QIcon, QPixmap, QPainter
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QPushButton, QLabel, QGraphicsOpacityEffect,
 )
+
+
+def _svg_icon(path: Path, color: str = "#ffffff") -> QIcon:
+    """Load an SVG replacing its white strokes/fills with *color*."""
+    from PySide6.QtSvg import QSvgRenderer
+    if not path.exists():
+        return QIcon()
+    content = path.read_text(encoding="utf-8")
+    content = content.replace('"#ffffff"', f'"{color}"').replace('"#fff"', f'"{color}"')
+    data = QByteArray(content.encode())
+    renderer = QSvgRenderer(data)
+    px = QPixmap(24, 24)
+    px.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(px)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(px)
 
 
 class OverlayButton(QPushButton):
@@ -44,12 +61,19 @@ class OverlayButton(QPushButton):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(label, parent)
+        self._icon_path = icon_path
         self.setToolTip(tooltip)
         self.setStyleSheet(self._STYLE)
         if icon_path and icon_path.exists():
-            self.setIcon(QIcon(str(icon_path)))
+            self.setIcon(_svg_icon(icon_path, "#ffffff"))
             self.setIconSize(self._ICON_SIZE)
             self.setText("")
+
+    def apply_theme(self, theme: str, btn_style: str, icon_color: str) -> None:
+        self.setStyleSheet(btn_style)
+        if self._icon_path and self._icon_path.exists():
+            self.setIcon(_svg_icon(self._icon_path, icon_color))
+            self.setIconSize(self._ICON_SIZE)
 
 
 class OverlayBar(QWidget):
@@ -103,6 +127,7 @@ class OverlayBar(QWidget):
             "background: rgba(40,40,40,180); border-radius:4px;"
         )
 
+        self._overlay_buttons: list[OverlayButton] = []
         self._build_layout()
 
     # ------------------------------------------------------------------ #
@@ -155,6 +180,7 @@ class OverlayBar(QWidget):
             btn = OverlayButton(label, tip, icon_path, self)
             btn.clicked.connect(signal)
             layout.addWidget(btn)
+            self._overlay_buttons.append(btn)
 
         layout.addSpacing(8)
         layout.addWidget(self._zoom_label)
@@ -171,6 +197,32 @@ class OverlayBar(QWidget):
     def _on_fade_finished(self) -> None:
         if self._opacity_effect.opacity() == 0.0:
             self.hide()
+
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            btn_style = """
+                QPushButton {
+                    background: rgba(220,220,220,0.92); border: 1px solid rgba(160,160,160,0.6);
+                    border-radius: 4px; color: #222; font-size: 14px; padding: 6px 10px; min-width: 30px;
+                }
+                QPushButton:hover   { background: rgba(70,115,185,230); border-color: rgba(120,160,220,180); color: #fff; }
+                QPushButton:pressed { background: rgba(40,90,150,240); }
+            """
+            icon_color = "#222222"
+            zoom_style = (
+                "color: #333; font-size: 12px; padding: 4px 8px;"
+                " background: rgba(220,220,220,0.85); border-radius:4px;"
+            )
+        else:
+            btn_style = OverlayButton._STYLE
+            icon_color = "#ffffff"
+            zoom_style = (
+                "color: #c0c0c0; font-size: 12px; padding: 4px 8px;"
+                " background: rgba(40,40,40,180); border-radius:4px;"
+            )
+        for btn in self._overlay_buttons:
+            btn.apply_theme(theme, btn_style, icon_color)
+        self._zoom_label.setStyleSheet(zoom_style)
 
     def enterEvent(self, event) -> None:
         self.keep_visible()

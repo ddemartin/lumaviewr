@@ -7,30 +7,40 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget,
 )
 
-_SLIDER_STYLE = """
-    QSlider::groove:horizontal {
-        height: 4px;
-        background: #3a3a3a;
-        border-radius: 2px;
-    }
-    QSlider::handle:horizontal {
-        width: 12px; height: 12px;
-        margin: -4px 0;
-        border-radius: 6px;
-        background: #aaa;
-    }
-    QSlider::handle:horizontal:hover { background: #fff; }
-    QSlider::sub-page:horizontal { background: #4a7ab5; border-radius: 2px; }
+def _slider_style(theme: str) -> str:
+    groove = "#ccc" if theme == "light" else "#3a3a3a"
+    handle = "#666" if theme == "light" else "#aaa"
+    handle_hover = "#333" if theme == "light" else "#fff"
+    return f"""
+    QSlider::groove:horizontal {{
+        height: 4px; background: {groove}; border-radius: 2px;
+    }}
+    QSlider::handle:horizontal {{
+        width: 12px; height: 12px; margin: -4px 0;
+        border-radius: 6px; background: {handle};
+    }}
+    QSlider::handle:horizontal:hover {{ background: {handle_hover}; }}
+    QSlider::sub-page:horizontal {{ background: #4a7ab5; border-radius: 2px; }}
 """
 
-_BTN_STYLE = """
+
+def _btn_style(theme: str) -> str:
+    if theme == "light":
+        return """
     QPushButton {
-        background: rgba(60,60,60,220);
-        color: #ccc;
-        border: 1px solid #666;
-        border-radius: 4px;
-        padding: 4px 14px;
-        font-size: 12px;
+        background: rgba(200,200,200,220); color: #222;
+        border: 1px solid #aaa; border-radius: 4px;
+        padding: 4px 14px; font-size: 12px;
+    }
+    QPushButton:hover   { background: rgba(180,180,180,240); color: #000; }
+    QPushButton:pressed { background: rgba(70,120,200,220); color: #fff; }
+    QPushButton:disabled { color: #aaa; border-color: #ccc; }
+"""
+    return """
+    QPushButton {
+        background: rgba(60,60,60,220); color: #ccc;
+        border: 1px solid #666; border-radius: 4px;
+        padding: 4px 14px; font-size: 12px;
     }
     QPushButton:hover   { background: rgba(90,90,90,240); color: #fff; }
     QPushButton:pressed { background: rgba(70,120,200,220); }
@@ -54,14 +64,14 @@ class _SliderRow(QWidget):
         self._default = default
         self._fmt = fmt_fn or (lambda v: f"{v:+d}" if v != 0 else " 0")
 
-        lbl = QLabel(label, self)
-        lbl.setFixedWidth(82)
-        lbl.setStyleSheet("color: #bbb; font-size: 12px;")
+        self._name_lbl = QLabel(label, self)
+        self._name_lbl.setFixedWidth(82)
+        self._name_lbl.setStyleSheet("color: #bbb; font-size: 12px;")
 
         self._slider = QSlider(Qt.Orientation.Horizontal, self)
         self._slider.setRange(lo, hi)
         self._slider.setValue(default)
-        self._slider.setStyleSheet(_SLIDER_STYLE)
+        self._slider.setStyleSheet(_slider_style("dark"))
 
         self._val_lbl = QLabel(self._fmt(default), self)
         self._val_lbl.setFixedWidth(46)
@@ -73,7 +83,7 @@ class _SliderRow(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)
-        lay.addWidget(lbl)
+        lay.addWidget(self._name_lbl)
         lay.addWidget(self._slider, stretch=1)
         lay.addWidget(self._val_lbl)
 
@@ -92,6 +102,17 @@ class _SliderRow(QWidget):
     def is_default(self) -> bool:
         return self._slider.value() == self._default
 
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            name_color, val_color = "#444", "#111"
+        else:
+            name_color, val_color = "#bbb", "#eee"
+        self._name_lbl.setStyleSheet(f"color: {name_color}; font-size: 12px;")
+        self._val_lbl.setStyleSheet(
+            f"color: {val_color}; font-size: 12px; font-family: monospace;"
+        )
+        self._slider.setStyleSheet(_slider_style(theme))
+
 
 class AdjustBar(QWidget):
     """Floating panel for live brightness/contrast/gamma/saturation adjustments."""
@@ -104,6 +125,8 @@ class AdjustBar(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._overwrite_allowed = True
+        self._bg_color = QColor(22, 22, 22, 228)
+        self._border_color = QColor(72, 72, 72)
 
         self._brightness = _SliderRow("Brightness", -100, 100, 0, parent=self)
         self._contrast   = _SliderRow("Contrast",   -100, 100, 0, parent=self)
@@ -119,7 +142,7 @@ class AdjustBar(QWidget):
         self._btn_save_as   = QPushButton("Save As…", self)
         self._btn_overwrite = QPushButton("Overwrite", self)
         for btn in (self._btn_cancel, self._btn_reset, self._btn_save_as, self._btn_overwrite):
-            btn.setStyleSheet(_BTN_STYLE)
+            btn.setStyleSheet(_btn_style("dark"))
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
@@ -146,10 +169,24 @@ class AdjustBar(QWidget):
         self._btn_save_as.clicked.connect(self.save_as_requested)
         self._btn_overwrite.clicked.connect(self.overwrite_requested)
 
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            self._bg_color = QColor(230, 230, 230, 240)
+            self._border_color = QColor(180, 180, 180)
+        else:
+            self._bg_color = QColor(22, 22, 22, 228)
+            self._border_color = QColor(72, 72, 72)
+        btn_s = _btn_style(theme)
+        for btn in (self._btn_cancel, self._btn_reset, self._btn_save_as, self._btn_overwrite):
+            btn.setStyleSheet(btn_s)
+        for row in (self._brightness, self._contrast, self._gamma, self._saturation):
+            row.apply_theme(theme)
+        self.update()
+
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(22, 22, 22, 228))
-        p.setPen(QColor(72, 72, 72))
+        p.fillRect(self.rect(), self._bg_color)
+        p.setPen(self._border_color)
         p.drawRect(self.rect().adjusted(0, 0, -1, -1))
 
     def get_params(self) -> tuple[int, int, int, int]:

@@ -43,6 +43,25 @@ from utils.settings_manager import SettingsManager
 log = logging.getLogger(__name__)
 
 
+def _svg_icon(path: Path, color: str = "#ffffff") -> QIcon:
+    """Load an SVG replacing its white strokes/fills with *color*."""
+    from PySide6.QtCore import QByteArray
+    from PySide6.QtSvg import QSvgRenderer
+    from PySide6.QtGui import QPixmap, QPainter
+    if not path.exists():
+        return QIcon()
+    content = path.read_text(encoding="utf-8")
+    content = content.replace('"#ffffff"', f'"{color}"').replace('"#fff"', f'"{color}"')
+    data = QByteArray(content.encode())
+    renderer = QSvgRenderer(data)
+    px = QPixmap(24, 24)
+    px.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(px)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(px)
+
+
 def _default_pictures_dir() -> Optional[Path]:
     import os
     for env in ("USERPROFILE", "HOME"):
@@ -552,17 +571,7 @@ class ViewerContainer(QWidget):
         self._hamburger = QPushButton("☰", self)
         self._hamburger.setFixedSize(self._HAMBURGER_SIZE, self._HAMBURGER_SIZE)
         self._hamburger.setToolTip("Toggle filmstrip")
-        self._hamburger.setStyleSheet("""
-            QPushButton {
-                background: rgba(30,30,30,0.85);
-                color: #bbb;
-                border: 1px solid #555;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-            QPushButton:hover   { background: rgba(60,60,60,0.95); color: #fff; }
-            QPushButton:pressed { background: rgba(70,120,200,0.9); }
-        """)
+        self._apply_hamburger_style("dark")
         self._hamburger.clicked.connect(self.toggle_filmstrip)
 
         layout = QVBoxLayout(self)
@@ -653,6 +662,36 @@ class ViewerContainer(QWidget):
             sh = self.slideshow_bar.sizeHint().height()
             self.slideshow_bar.setGeometry((self.width() - sw) // 2, m, sw, sh)
 
+    def _apply_hamburger_style(self, theme: str) -> None:
+        if theme == "light":
+            self._hamburger.setStyleSheet("""
+                QPushButton {
+                    background: rgba(220,220,220,0.90); color: #444;
+                    border: 1px solid rgba(160,160,160,0.7); border-radius: 4px; font-size: 14px;
+                }
+                QPushButton:hover   { background: rgba(200,200,200,0.95); color: #111; }
+                QPushButton:pressed { background: rgba(70,120,200,0.9); color: #fff; }
+            """)
+        else:
+            self._hamburger.setStyleSheet("""
+                QPushButton {
+                    background: rgba(30,30,30,0.85); color: #bbb;
+                    border: 1px solid #555; border-radius: 4px; font-size: 14px;
+                }
+                QPushButton:hover   { background: rgba(60,60,60,0.95); color: #fff; }
+                QPushButton:pressed { background: rgba(70,120,200,0.9); }
+            """)
+
+    def apply_theme(self, theme: str) -> None:
+        self._apply_hamburger_style(theme)
+        self.adjust_bar.apply_theme(theme)
+        self.rotate_bar.apply_theme(theme)
+        self.flip_bar.apply_theme(theme)
+        self.crop_bar.apply_theme(theme)
+        self.resize_bar.apply_theme(theme)
+        self.slideshow_bar.apply_theme(theme)
+        self.overlay.apply_theme(theme)
+
 
 class MainWindow(QMainWindow):
     """
@@ -693,6 +732,7 @@ class MainWindow(QMainWindow):
         self._thumb_queue:    deque[Path] = deque()
         self._thumb_done:     set[Path]   = set()
         self._thumb_inflight: int         = 0
+        self._theme: str = "dark"
         self._tray_available: bool = False
         self._crop_mode_active: bool = False
         self._adjust_mode_active: bool = False
@@ -876,9 +916,101 @@ class MainWindow(QMainWindow):
 
     def apply_theme(self, theme: str) -> None:
         """Propagate theme change to child widgets that have hardcoded styles."""
+        self._theme = theme
         self._grid.apply_theme(theme)
         self._meta_panel.apply_theme(theme)
         self._expanded_overlay.apply_theme(theme)
+        self._container.apply_theme(theme)
+        self._apply_search_bar_theme(theme)
+        self._apply_icon_colors(theme)
+        self._apply_nav_theme(theme)
+
+    def _apply_icon_colors(self, theme: str) -> None:
+        color = "#1a1a1a" if theme == "light" else "#ffffff"
+        for obj, path in getattr(self, "_toolbar_icon_items", []):
+            icon = _svg_icon(path, color)
+            obj.setIcon(icon)
+        for btn, path in getattr(self, "_nav_icon_items", []):
+            btn.setIcon(_svg_icon(path, color))
+
+    def _apply_nav_theme(self, theme: str) -> None:
+        if theme == "light":
+            label_color = "#555"
+            sort_style = (
+                "QPushButton { background: transparent; color: #666; border: none; font-size: 14px; }"
+                "QPushButton:hover { color: #111; }"
+            )
+            next_folder_style = (
+                "QPushButton { background: #e8e8e8; color: #555; border: none;"
+                " border-top: 1px solid #ccc; padding: 4px; }"
+                "QPushButton:enabled:hover { background: #ddd; color: #222; }"
+                "QPushButton:enabled:pressed { background: #ccc; }"
+                "QPushButton:disabled { opacity: 0.35; }"
+            )
+        else:
+            label_color = "#aaa"
+            sort_style = (
+                "QPushButton { background: transparent; color: #aaa; border: none; font-size: 14px; }"
+                "QPushButton:hover { color: #fff; }"
+            )
+            next_folder_style = (
+                "QPushButton { background: #252525; color: #888; border: none;"
+                " border-top: 1px solid #2e2e2e; padding: 4px; }"
+                "QPushButton:enabled:hover { background: #303030; color: #ccc; }"
+                "QPushButton:enabled:pressed { background: #333; }"
+                "QPushButton:disabled { opacity: 0.35; }"
+            )
+        self._nav_label.setStyleSheet(f"color: {label_color}; font-size: 11px;")
+        self._sort_btn.setStyleSheet(sort_style)
+        self._nav_next_folder_btn.setStyleSheet(next_folder_style)
+
+    def _apply_search_bar_theme(self, theme: str) -> None:
+        if theme == "light":
+            bar_bg = "#e8e8e8"
+            bar_border = "#ccc"
+            edit_style = (
+                "QLineEdit { background: #fff; color: #222; border: 1px solid #bbb;"
+                " border-radius: 3px; padding: 1px 5px; font-size: 11px; }"
+                "QLineEdit:focus { border-color: #4a8ccf; }"
+            )
+            meta_style = (
+                "QPushButton { background: #ddd; color: #555; border: 1px solid #bbb;"
+                " border-radius: 3px; font-size: 10px; font-weight: bold; }"
+                "QPushButton:checked { background: #c0d8f0; color: #0055aa; border-color: #4a8ccf; }"
+                "QPushButton:hover   { color: #222; }"
+            )
+            clear_style = (
+                "QPushButton { background: transparent; color: #999; border: none; font-size: 11px; }"
+                "QPushButton:hover { color: #333; }"
+            )
+            count_style = "color: #888; font-size: 10px; min-width: 30px;"
+        else:
+            bar_bg = "#252525"
+            bar_border = "#2e2e2e"
+            edit_style = (
+                "QLineEdit { background: #1a1a1a; color: #ddd; border: 1px solid #3a3a3a;"
+                " border-radius: 3px; padding: 1px 5px; font-size: 11px; }"
+                "QLineEdit:focus { border-color: #4a8ccf; }"
+            )
+            meta_style = (
+                "QPushButton { background: #2a2a2a; color: #888; border: 1px solid #3a3a3a;"
+                " border-radius: 3px; font-size: 10px; font-weight: bold; }"
+                "QPushButton:checked { background: #1a4a7a; color: #4af; border-color: #4a8ccf; }"
+                "QPushButton:hover   { color: #ccc; }"
+            )
+            clear_style = (
+                "QPushButton { background: transparent; color: #666; border: none; font-size: 11px; }"
+                "QPushButton:hover { color: #ccc; }"
+            )
+            count_style = "color: #666; font-size: 10px; min-width: 30px;"
+
+        self._search_bar.setStyleSheet(
+            f"background: {bar_bg}; border-bottom: 1px solid {bar_border};"
+        )
+        self._search_edit.setStyleSheet(edit_style)
+        self._search_meta_btn.setStyleSheet(meta_style)
+        self._search_clear_btn.setStyleSheet(clear_style)
+        self._search_count_lbl.setStyleSheet(count_style)
 
     def closeEvent(self, event) -> None:
         if self._tray_available and self._settings.close_to_tray:
@@ -931,9 +1063,13 @@ class MainWindow(QMainWindow):
         # Nav bar: [↑]  folder name  [grid]
         _tb_dir = ASSETS_DIR / "icons" / "toolbar"
 
-        def _nav_icon(name: str) -> QIcon:
+        # (button, icon_path) pairs for theme-aware recoloring
+        self._nav_icon_items: list[tuple] = []
+
+        def _nav_icon(btn: QPushButton, name: str) -> None:
             p = _tb_dir / name
-            return QIcon(str(p)) if p.exists() else QIcon()
+            btn.setIcon(_svg_icon(p))
+            self._nav_icon_items.append((btn, p))
 
         nav_bar = QWidget()
         nav_bar.setFixedHeight(34)
@@ -941,7 +1077,7 @@ class MainWindow(QMainWindow):
         nav_layout.setContentsMargins(4, 3, 4, 3)
         nav_layout.setSpacing(4)
         self._nav_up_btn = QPushButton()
-        self._nav_up_btn.setIcon(_nav_icon("folder-up.svg"))
+        _nav_icon(self._nav_up_btn, "folder-up.svg")
         self._nav_up_btn.setIconSize(QSize(20, 20))
         self._nav_up_btn.setFixedSize(28, 28)
         self._nav_up_btn.setToolTip("Go to parent folder")
@@ -949,7 +1085,7 @@ class MainWindow(QMainWindow):
         self._nav_label = QLabel("")
         self._nav_label.setStyleSheet("color: #aaa; font-size: 11px;")
         self._nav_expand_btn = QPushButton()
-        self._nav_expand_btn.setIcon(_nav_icon("grid.svg"))
+        _nav_icon(self._nav_expand_btn, "grid.svg")
         self._nav_expand_btn.setIconSize(QSize(20, 20))
         self._nav_expand_btn.setFixedSize(28, 28)
         self._nav_expand_btn.setToolTip("Open full-window thumbnail browser")
@@ -1018,21 +1154,11 @@ class MainWindow(QMainWindow):
 
         # Bottom of strip: "Next folder" button
         self._nav_next_folder_btn = QPushButton()
-        self._nav_next_folder_btn.setIcon(_nav_icon("folder-next.svg"))
+        _nav_icon(self._nav_next_folder_btn, "folder-next.svg")
         self._nav_next_folder_btn.setIconSize(QSize(20, 20))
         self._nav_next_folder_btn.setFixedHeight(28)
         self._nav_next_folder_btn.setToolTip("Next sibling folder")
         self._nav_next_folder_btn.setEnabled(False)
-        self._nav_next_folder_btn.setStyleSheet("""
-            QPushButton {
-                background: #252525; color: #888; border: none;
-                border-top: 1px solid #2e2e2e;
-                border-radius: 0;
-            }
-            QPushButton:enabled:hover  { background: #2e2e2e; color: #ccc; }
-            QPushButton:enabled:pressed { background: #333; }
-            QPushButton:disabled { opacity: 0.35; }
-        """)
         left_layout.addWidget(self._nav_next_folder_btn)
 
         left.setMinimumWidth(180)
@@ -1184,8 +1310,14 @@ class MainWindow(QMainWindow):
         overlay_dir = ASSETS_DIR / "icons" / "overlay"
         tb_dir      = ASSETS_DIR / "icons" / "toolbar"
 
-        def _icon(path) -> QIcon:
-            return QIcon(str(path)) if path.exists() else QIcon()
+        # Each entry: (QAction or QToolButton, icon_path)
+        self._toolbar_icon_items: list[tuple] = []
+
+        def _icon(obj, path: Path) -> QIcon:
+            icon = _svg_icon(path)
+            obj.setIcon(icon)
+            self._toolbar_icon_items.append((obj, path))
+            return icon
 
         tb = QToolBar("Main Toolbar", self)
         tb.setMovable(False)
@@ -1196,64 +1328,64 @@ class MainWindow(QMainWindow):
         self._toolbar = tb
 
         # --- File ---
-        self._open_act.setIcon(_icon(tb_dir / "open_file.svg"))
+        _icon(self._open_act, tb_dir / "open_file.svg")
         self._open_act.setToolTip("Open File  (Ctrl+O)")
         tb.addAction(self._open_act)
 
-        self._open_folder_act.setIcon(_icon(tb_dir / "open_folder.svg"))
+        _icon(self._open_folder_act, tb_dir / "open_folder.svg")
         self._open_folder_act.setToolTip("Open Folder  (Ctrl+Shift+O)")
         tb.addAction(self._open_folder_act)
 
         tb.addSeparator()
 
         # --- View ---
-        self._fit_act.setIcon(_icon(overlay_dir / "fit.svg"))
+        _icon(self._fit_act, overlay_dir / "fit.svg")
         self._fit_act.setToolTip("Fit to Window  (F)")
         tb.addAction(self._fit_act)
 
-        self._one_act.setIcon(_icon(tb_dir / "actual_size.svg"))
+        _icon(self._one_act, tb_dir / "actual_size.svg")
         self._one_act.setToolTip("Actual Size 1:1  (1)")
         tb.addAction(self._one_act)
 
-        self._full_act.setIcon(_icon(overlay_dir / "fullscreen.svg"))
+        _icon(self._full_act, overlay_dir / "fullscreen.svg")
         self._full_act.setToolTip("Fullscreen  (F11)")
         tb.addAction(self._full_act)
 
         tb.addSeparator()
 
         # --- Edit (enable/disable synced automatically via QAction) ---
-        self._act_crop.setIcon(_icon(tb_dir / "crop.svg"))
+        _icon(self._act_crop, tb_dir / "crop.svg")
         self._act_crop.setToolTip("Crop  (C)")
         tb.addAction(self._act_crop)
 
-        self._act_adjust.setIcon(_icon(tb_dir / "adjust.svg"))
+        _icon(self._act_adjust, tb_dir / "adjust.svg")
         self._act_adjust.setToolTip("Adjust  (A)")
         tb.addAction(self._act_adjust)
 
-        self._act_rotate.setIcon(_icon(tb_dir / "rotate.svg"))
+        _icon(self._act_rotate, tb_dir / "rotate.svg")
         self._act_rotate.setToolTip("Rotate  (R)")
         tb.addAction(self._act_rotate)
 
-        self._act_flip.setIcon(_icon(tb_dir / "flip.svg"))
+        _icon(self._act_flip, tb_dir / "flip.svg")
         self._act_flip.setToolTip("Flip  (L)")
         tb.addAction(self._act_flip)
 
-        self._act_resize.setIcon(_icon(tb_dir / "resize.svg"))
+        _icon(self._act_resize, tb_dir / "resize.svg")
         self._act_resize.setToolTip("Resize  (Z)")
         tb.addAction(self._act_resize)
 
         tb.addSeparator()
 
         # --- Extra ---
-        self._search_act.setIcon(_icon(tb_dir / "search.svg"))
+        _icon(self._search_act, tb_dir / "search.svg")
         self._search_act.setToolTip("Search  (Ctrl+F)")
         tb.addAction(self._search_act)
 
-        self._slideshow_act.setIcon(_icon(tb_dir / "slideshow.svg"))
+        _icon(self._slideshow_act, tb_dir / "slideshow.svg")
         self._slideshow_act.setToolTip("Slideshow  (F5)")
         tb.addAction(self._slideshow_act)
 
-        self._meta_panel_act.setIcon(_icon(tb_dir / "metadata.svg"))
+        _icon(self._meta_panel_act, tb_dir / "metadata.svg")
         self._meta_panel_act.setToolTip("Metadata Panel  (Ctrl+I)")
         tb.addAction(self._meta_panel_act)
 
@@ -1261,7 +1393,7 @@ class MainWindow(QMainWindow):
 
         # --- More (overflow) ---
         more_btn = QToolButton(tb)
-        more_btn.setIcon(_icon(tb_dir / "more.svg"))
+        _icon(more_btn, tb_dir / "more.svg")
         more_btn.setToolTip("More")
         more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         more_menu = QMenu(more_btn)
@@ -2785,7 +2917,7 @@ class MainWindow(QMainWindow):
             self._app.check_for_updates()
 
     def _show_about(self) -> None:
-        dlg = AboutDialog(self)
+        dlg = AboutDialog(self, theme=getattr(self, "_theme", "dark"))
         dlg.exec()
 
     def _toggle_fullscreen(self) -> None:

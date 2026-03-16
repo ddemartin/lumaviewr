@@ -480,13 +480,13 @@ class Pix42App:
                 color: #fff;
             }
             QToolBar {
-                background: #383838;
-                border-bottom: 1px solid #2a2a2a;
+                background: #e8e8e8;
+                border-bottom: 1px solid #ccc;
                 spacing: 1px;
                 padding: 2px 4px;
             }
             QToolBar::separator {
-                background: #555;
+                background: #bbb;
                 width: 1px;
                 margin: 4px 3px;
             }
@@ -495,16 +495,16 @@ class Pix42App:
                 border: none;
                 border-radius: 4px;
                 padding: 4px;
-                color: #e8e8e8;
+                color: #1a1a1a;
             }
             QToolBar QToolButton:hover {
-                background: rgba(255, 255, 255, 0.14);
+                background: rgba(0, 0, 0, 0.08);
             }
             QToolBar QToolButton:pressed {
-                background: rgba(255, 255, 255, 0.22);
+                background: rgba(0, 0, 0, 0.14);
             }
             QToolBar QToolButton:checked {
-                background: rgba(42, 130, 218, 0.45);
+                background: rgba(42, 130, 218, 0.30);
             }
             QToolBar QToolButton:disabled {
                 opacity: 0.35;

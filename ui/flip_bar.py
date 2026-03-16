@@ -15,29 +15,35 @@ class FlipBar(QWidget):
     save_as_requested   = Signal()
     overwrite_requested = Signal()
 
-    _STYLE = """
-        QLabel {
-            color: #888;
-            font-size: 12px;
-            padding: 0 2px;
-        }
+    _STYLE_DARK = """
+        QLabel { color: #888; font-size: 12px; padding: 0 2px; }
         QPushButton {
-            background: rgba(60,60,60,220);
-            color: #ccc;
-            border: 1px solid #666;
-            border-radius: 4px;
-            padding: 4px 14px;
-            font-size: 12px;
+            background: rgba(60,60,60,220); color: #ccc;
+            border: 1px solid #666; border-radius: 4px;
+            padding: 4px 14px; font-size: 12px;
         }
         QPushButton:hover    { background: rgba(90,90,90,240); color: #fff; }
         QPushButton:pressed  { background: rgba(70,120,200,220); }
-        QPushButton:checked  { background: rgba(60,120,200,200); color: #fff;
-                               border-color: #4a8ccf; }
+        QPushButton:checked  { background: rgba(60,120,200,200); color: #fff; border-color: #4a8ccf; }
         QPushButton:disabled { color: #555; border-color: #444; }
+    """
+    _STYLE_LIGHT = """
+        QLabel { color: #666; font-size: 12px; padding: 0 2px; }
+        QPushButton {
+            background: rgba(200,200,200,220); color: #222;
+            border: 1px solid #aaa; border-radius: 4px;
+            padding: 4px 14px; font-size: 12px;
+        }
+        QPushButton:hover    { background: rgba(180,180,180,240); color: #000; }
+        QPushButton:pressed  { background: rgba(70,120,200,220); color: #fff; }
+        QPushButton:checked  { background: rgba(60,120,200,200); color: #fff; border-color: #4a8ccf; }
+        QPushButton:disabled { color: #aaa; border-color: #ccc; }
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._bg_color = QColor(22, 22, 22, 220)
+        self._border_color = QColor(75, 75, 75)
 
         self._btn_h         = QPushButton("↔  Flip H", self)
         self._btn_v         = QPushButton("↕  Flip V", self)
@@ -61,7 +67,7 @@ class FlipBar(QWidget):
         lay.addWidget(self._btn_save_as)
         lay.addWidget(self._btn_overwrite)
 
-        self.setStyleSheet(self._STYLE)
+        self.setStyleSheet(self._STYLE_DARK)
 
         self._btn_h.clicked.connect(self._on_flip_h)
         self._btn_v.clicked.connect(self._on_flip_v)
@@ -105,8 +111,19 @@ class FlipBar(QWidget):
     def flip_v(self) -> bool:
         return self._btn_v.isChecked()
 
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            self._bg_color = QColor(230, 230, 230, 240)
+            self._border_color = QColor(180, 180, 180)
+            self.setStyleSheet(self._STYLE_LIGHT)
+        else:
+            self._bg_color = QColor(22, 22, 22, 220)
+            self._border_color = QColor(75, 75, 75)
+            self.setStyleSheet(self._STYLE_DARK)
+        self.update()
+
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(22, 22, 22, 220))
-        p.setPen(QColor(75, 75, 75))
+        p.fillRect(self.rect(), self._bg_color)
+        p.setPen(self._border_color)
         p.drawRect(self.rect().adjusted(0, 0, -1, -1))

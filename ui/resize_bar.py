@@ -8,22 +8,48 @@ from PySide6.QtWidgets import (
     QPushButton, QRadioButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
-_BTN_STYLE = """
+def _btn_style(theme: str) -> str:
+    if theme == "light":
+        return """
     QPushButton {
-        background: rgba(60,60,60,220);
-        color: #ccc;
-        border: 1px solid #666;
-        border-radius: 4px;
-        padding: 4px 14px;
-        font-size: 12px;
+        background: rgba(200,200,200,220); color: #222;
+        border: 1px solid #aaa; border-radius: 4px;
+        padding: 4px 14px; font-size: 12px;
+    }
+    QPushButton:hover   { background: rgba(180,180,180,240); color: #000; }
+    QPushButton:pressed { background: rgba(70,120,200,220); color: #fff; }
+    QPushButton:checked { background: rgba(60,120,200,200); color: #fff; border-color: #4a8ccf; }
+    QPushButton:disabled { color: #aaa; border-color: #ccc; }
+"""
+    return """
+    QPushButton {
+        background: rgba(60,60,60,220); color: #ccc;
+        border: 1px solid #666; border-radius: 4px;
+        padding: 4px 14px; font-size: 12px;
     }
     QPushButton:hover   { background: rgba(90,90,90,240); color: #fff; }
     QPushButton:pressed { background: rgba(70,120,200,220); }
     QPushButton:checked { background: rgba(60,120,200,200); color: #fff; border-color: #4a8ccf; }
     QPushButton:disabled { color: #555; border-color: #444; }
 """
-_LBL = "color: #bbb; font-size: 12px;"
-_SPIN_STYLE = """
+
+
+def _lbl_style(theme: str) -> str:
+    return "color: #444; font-size: 12px;" if theme == "light" else "color: #bbb; font-size: 12px;"
+
+
+def _spin_style(theme: str) -> str:
+    if theme == "light":
+        return """
+    QSpinBox {
+        background: #fff; color: #222;
+        border: 1px solid #bbb; border-radius: 3px;
+        padding: 2px 4px; font-size: 12px;
+    }
+    QSpinBox:focus { border-color: #4a7ab5; }
+    QSpinBox::up-button, QSpinBox::down-button { width: 16px; }
+"""
+    return """
     QSpinBox {
         background: #2a2a2a; color: #eee;
         border: 1px solid #555; border-radius: 3px;
@@ -32,7 +58,22 @@ _SPIN_STYLE = """
     QSpinBox:focus { border-color: #4a7ab5; }
     QSpinBox::up-button, QSpinBox::down-button { width: 16px; }
 """
-_COMBO_STYLE = """
+
+
+def _combo_style(theme: str) -> str:
+    if theme == "light":
+        return """
+    QComboBox {
+        background: #fff; color: #222; border: 1px solid #bbb;
+        border-radius: 3px; padding: 2px 6px; font-size: 12px;
+    }
+    QComboBox::drop-down { border: none; }
+    QComboBox QAbstractItemView {
+        background: #fff; color: #222;
+        selection-background-color: #3a7acc;
+    }
+"""
+    return """
     QComboBox {
         background: #2a2a2a; color: #eee; border: 1px solid #555;
         border-radius: 3px; padding: 2px 6px; font-size: 12px;
@@ -43,19 +84,24 @@ _COMBO_STYLE = """
         selection-background-color: #3a5a8a;
     }
 """
-_EDIT_STYLE = """
+
+
+def _edit_style(theme: str) -> str:
+    if theme == "light":
+        return """
+    QLineEdit {
+        background: #fff; color: #222; border: 1px solid #bbb;
+        border-radius: 3px; padding: 2px 6px; font-size: 12px;
+    }
+    QLineEdit:focus { border-color: #4a7ab5; }
+"""
+    return """
     QLineEdit {
         background: #2a2a2a; color: #eee; border: 1px solid #555;
         border-radius: 3px; padding: 2px 6px; font-size: 12px;
     }
     QLineEdit:focus { border-color: #4a7ab5; }
 """
-
-
-def _lbl(text: str, parent: QWidget) -> QLabel:
-    l = QLabel(text, parent)
-    l.setStyleSheet(_LBL)
-    return l
 
 
 class ResizeBar(QWidget):
@@ -75,6 +121,15 @@ class ResizeBar(QWidget):
         self._orig_h: int = 0
         self._updating: bool = False
         self._overwrite_allowed: bool = True
+        self._bg_color = QColor(22, 22, 22, 228)
+        self._border_color = QColor(72, 72, 72)
+        self._static_labels: list[QLabel] = []
+
+        def _lbl(text: str) -> QLabel:
+            l = QLabel(text, self)
+            l.setStyleSheet(_lbl_style("dark"))
+            self._static_labels.append(l)
+            return l
 
         # --- Mode radios ---
         self._radio_px  = QRadioButton("Pixels",  self)
@@ -94,29 +149,29 @@ class ResizeBar(QWidget):
         self._spin_w.setRange(1, 99999)
         self._spin_w.setValue(1920)
         self._spin_w.setFixedWidth(82)
-        self._spin_w.setStyleSheet(_SPIN_STYLE)
+        self._spin_w.setStyleSheet(_spin_style("dark"))
 
         self._btn_lock = QPushButton("🔗", self)
         self._btn_lock.setCheckable(True)
         self._btn_lock.setChecked(True)
         self._btn_lock.setFixedSize(28, 28)
         self._btn_lock.setToolTip("Lock aspect ratio")
-        self._btn_lock.setStyleSheet(_BTN_STYLE)
+        self._btn_lock.setStyleSheet(_btn_style("dark"))
 
         self._spin_h = QSpinBox(self)
         self._spin_h.setRange(1, 99999)
         self._spin_h.setValue(1080)
         self._spin_h.setFixedWidth(82)
-        self._spin_h.setStyleSheet(_SPIN_STYLE)
+        self._spin_h.setStyleSheet(_spin_style("dark"))
 
         self._unit_lbl = QLabel("px", self)
-        self._unit_lbl.setStyleSheet(_LBL)
+        self._unit_lbl.setStyleSheet(_lbl_style("dark"))
 
         # --- Resample ---
         self._combo_resample = QComboBox(self)
         self._combo_resample.addItems(["Nearest", "Bilinear", "Bicubic", "Lanczos"])
         self._combo_resample.setCurrentText("Lanczos")
-        self._combo_resample.setStyleSheet(_COMBO_STYLE)
+        self._combo_resample.setStyleSheet(_combo_style("dark"))
         self._combo_resample.setFixedWidth(92)
 
         # --- Batch + suffix ---
@@ -125,7 +180,7 @@ class ResizeBar(QWidget):
 
         self._suffix_edit = QLineEdit("_resized", self)
         self._suffix_edit.setFixedWidth(110)
-        self._suffix_edit.setStyleSheet(_EDIT_STYLE)
+        self._suffix_edit.setStyleSheet(_edit_style("dark"))
         self._suffix_edit.setToolTip(
             "Suffix appended to the filename when saving with Save As.\n"
             "Batch mode: all files are saved automatically using this suffix."
@@ -136,12 +191,12 @@ class ResizeBar(QWidget):
         self._btn_save_as   = QPushButton("Save As…", self)
         self._btn_overwrite = QPushButton("Overwrite", self)
         for b in (self._btn_cancel, self._btn_save_as, self._btn_overwrite):
-            b.setStyleSheet(_BTN_STYLE)
+            b.setStyleSheet(_btn_style("dark"))
 
         # --- Layout ---
         row_mode = QHBoxLayout()
         row_mode.setSpacing(8)
-        row_mode.addWidget(_lbl("Mode:", self))
+        row_mode.addWidget(_lbl("Mode:"))
         row_mode.addWidget(self._radio_px)
         row_mode.addWidget(self._radio_pct)
         row_mode.addWidget(self._radio_fit)
@@ -150,14 +205,14 @@ class ResizeBar(QWidget):
 
         row_dims = QHBoxLayout()
         row_dims.setSpacing(6)
-        row_dims.addWidget(_lbl("W:", self))
+        row_dims.addWidget(_lbl("W:"))
         row_dims.addWidget(self._spin_w)
         row_dims.addWidget(self._btn_lock)
-        row_dims.addWidget(_lbl("H:", self))
+        row_dims.addWidget(_lbl("H:"))
         row_dims.addWidget(self._spin_h)
         row_dims.addWidget(self._unit_lbl)
         row_dims.addSpacing(16)
-        row_dims.addWidget(_lbl("Resample:", self))
+        row_dims.addWidget(_lbl("Resample:"))
         row_dims.addWidget(self._combo_resample)
         row_dims.addStretch()
 
@@ -165,7 +220,7 @@ class ResizeBar(QWidget):
         row_opt.setSpacing(8)
         row_opt.addWidget(self._chk_batch)
         row_opt.addStretch()
-        row_opt.addWidget(_lbl("Suffix:", self))
+        row_opt.addWidget(_lbl("Suffix:"))
         row_opt.addWidget(self._suffix_edit)
 
         row_btn = QHBoxLayout()
@@ -244,10 +299,40 @@ class ResizeBar(QWidget):
     # Paint                                                                #
     # ------------------------------------------------------------------ #
 
+    def apply_theme(self, theme: str) -> None:
+        if theme == "light":
+            self._bg_color = QColor(230, 230, 230, 240)
+            self._border_color = QColor(180, 180, 180)
+            radio_color = "#333"
+            orig_color = "#888"
+            chk_color = "#444"
+        else:
+            self._bg_color = QColor(22, 22, 22, 228)
+            self._border_color = QColor(72, 72, 72)
+            radio_color = "#ccc"
+            orig_color = "#666"
+            chk_color = "#bbb"
+
+        for rb in (self._radio_px, self._radio_pct, self._radio_fit):
+            rb.setStyleSheet(f"color: {radio_color}; font-size: 12px;")
+        self._orig_lbl.setStyleSheet(f"color: {orig_color}; font-size: 11px;")
+        self._chk_batch.setStyleSheet(f"color: {chk_color}; font-size: 12px;")
+        self._unit_lbl.setStyleSheet(_lbl_style(theme))
+        for lbl in self._static_labels:
+            lbl.setStyleSheet(_lbl_style(theme))
+        self._spin_w.setStyleSheet(_spin_style(theme))
+        self._spin_h.setStyleSheet(_spin_style(theme))
+        self._combo_resample.setStyleSheet(_combo_style(theme))
+        self._suffix_edit.setStyleSheet(_edit_style(theme))
+        btn_s = _btn_style(theme)
+        for b in (self._btn_lock, self._btn_cancel, self._btn_save_as, self._btn_overwrite):
+            b.setStyleSheet(btn_s)
+        self.update()
+
     def paintEvent(self, _event) -> None:
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(22, 22, 22, 228))
-        p.setPen(QColor(72, 72, 72))
+        p.fillRect(self.rect(), self._bg_color)
+        p.setPen(self._border_color)
         p.drawRect(self.rect().adjusted(0, 0, -1, -1))
 
     # ------------------------------------------------------------------ #
