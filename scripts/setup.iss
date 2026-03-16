@@ -51,7 +51,7 @@ Name: "contextmenu"; Description: """Open with Pix42"" in right-click menu"; \
     GroupDescription: "Shell integration:"
 
 ; File associations (sets Pix42 as the default application)
-Name: "assoc_images"; Description: "Common images  (.jpg  .jpeg  .png  .bmp  .gif  .webp  .tif  .tiff  .ico)"; \
+Name: "assoc_images"; Description: "Common images  (.jpg  .jpeg  .png  .bmp  .gif  .webp  .tif  .tiff  .ico  .svg  .heic  .heif)"; \
     GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
 Name: "assoc_raw";    Description: "RAW camera files  (.cr2  .cr3  .nef  .arw  .dng  .rw2  .raf  .orf  ...)"; \
     GroupDescription: "File associations (sets Pix42 as default):"; Flags: unchecked
@@ -128,6 +128,9 @@ Root: HKA; Subkey: "Software\Classes\.ico";  ValueType: string; ValueName: ""; V
 Root: HKA; Subkey: "Software\Classes\.ppm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
 Root: HKA; Subkey: "Software\Classes\.pgm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
 Root: HKA; Subkey: "Software\Classes\.pbm";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.svg";  ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.heic"; ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
+Root: HKA; Subkey: "Software\Classes\.heif"; ValueType: string; ValueName: ""; ValueData: "Pix42.ImageFile"; Flags: uninsdeletevalue; Tasks: assoc_images
 
 ; RAW camera files (rawpy / libraw)
 Root: HKA; Subkey: "Software\Classes\.cr2";  ValueType: string; ValueName: ""; ValueData: "Pix42.RawFile"; Flags: uninsdeletevalue; Tasks: assoc_raw
@@ -159,6 +162,18 @@ Root: HKA; Subkey: "Software\Classes\.fts";  ValueType: string; ValueName: ""; V
 
 ; Photoshop (psd-tools)
 Root: HKA; Subkey: "Software\Classes\.psd";  ValueType: string; ValueName: ""; ValueData: "Pix42.PsdFile";  Flags: uninsdeletevalue; Tasks: assoc_psd
+
+; ── Application registration ("Open with" shows "Pix42", not "pix42.exe") ────
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}"; \
+    ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}\shell\open\command"; \
+    ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
+
+; App Paths — lets Windows locate the executable by name (e.g. Run dialog)
+Root: HKA; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{#AppExeName}"; \
+    ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{#AppExeName}"; \
+    ValueType: string; ValueName: "Path"; ValueData: "{app}"
 
 ; ── Context menu "Open with Pix42" (appears on all file types) ───────────────
 ; Uses HKLM\Software\Classes\*\shell which Windows merges into HKCR\*\shell.
