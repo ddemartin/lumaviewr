@@ -201,6 +201,11 @@ class MediaPlayer(QWidget):
         self._player.setSource(QUrl.fromLocalFile(str(path)))
         self._player.play()
 
+    def pause(self) -> None:
+        """Pause playback without releasing the source (position preserved)."""
+        if self._player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self._player.pause()
+
     def stop(self) -> None:
         """Stop playback and release the source."""
         self._player.stop()

@@ -1014,7 +1014,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         if self._tray_available and self._settings.close_to_tray:
-            # Hide to tray instead of quitting
+            # Pause any playing media before hiding so audio stops
+            self._container.media_player.pause()
             event.ignore()
             self.hide()
             return
