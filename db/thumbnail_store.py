@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QByteArray, QBuffer, QIODeviceBase
+from PySide6.QtCore import QByteArray, QBuffer, QIODeviceBase, Qt
 from PySide6.QtGui import QImage
 
 from .database import Database
@@ -64,8 +64,8 @@ class ThumbnailStore:
 
         scaled = image.scaled(
             self.THUMB_SIZE, self.THUMB_SIZE,
-            1,  # Qt.AspectRatioMode.KeepAspectRatio
-            1,  # Qt.TransformationMode.SmoothTransformation
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
         )
 
         buf = QByteArray()
