@@ -50,6 +50,8 @@ python main.py path/to/file
 | Portable bitmap | `.ppm` `.pgm` `.pbm` |
 | Adobe Photoshop | `.psd` |
 | FITS | `.fit` `.fits` `.fts` |
+| SVG | `.svg` |
+| HEIC/HEIF |  `.heic` `.heif` |
 
 ### Animated images
 
