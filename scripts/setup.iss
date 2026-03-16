@@ -34,6 +34,7 @@ RestartApplications=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
+ChangesAssociations=yes
 
 ; ---------------------------------------------------------------------------
 [Languages]
@@ -163,6 +164,63 @@ Root: HKA; Subkey: "Software\Classes\.fts";  ValueType: string; ValueName: ""; V
 ; Photoshop (psd-tools)
 Root: HKA; Subkey: "Software\Classes\.psd";  ValueType: string; ValueName: ""; ValueData: "Pix42.PsdFile";  Flags: uninsdeletevalue; Tasks: assoc_psd
 
+; ── RegisteredApplications + Capabilities (Windows "Default Apps" integration) ─
+; This is the official Windows 8+ mechanism.  It does NOT forcibly override
+; another app's UserChoice (Windows prevents that since Win10 1703) but it
+; registers Pix42 so users can pick it in Settings → Default Apps.
+; These entries are written unconditionally (no Tasks condition).
+Root: HKLM; Subkey: "SOFTWARE\RegisteredApplications"; \
+    ValueType: string; ValueName: "{#AppName}"; \
+    ValueData: "SOFTWARE\{#AppName}\Capabilities"; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities"; \
+    ValueType: string; ValueName: "ApplicationName";        ValueData: "{#AppName}"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities"; \
+    ValueType: string; ValueName: "ApplicationDescription"; ValueData: "Image viewer for RAW, FITS, PSD, SVG, HEIC and common formats"
+; Common images
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpg";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".jpeg"; ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".png";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".bmp";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".gif";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".webp"; ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".tif";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".tiff"; ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".ico";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".ppm";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".pgm";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".pbm";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".svg";  ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".heic"; ValueData: "Pix42.ImageFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".heif"; ValueData: "Pix42.ImageFile"
+; RAW
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".cr2";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".cr3";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".nef";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".nrw";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".arw";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".srf";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".sr2";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".rw2";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".raf";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".orf";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".dng";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".pef";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".x3f";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".kdc";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".dcr";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mrw";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".3fr";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".mef";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".erf";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".rwl";  ValueData: "Pix42.RawFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".iiq";  ValueData: "Pix42.RawFile"
+; FITS
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".fit";  ValueData: "Pix42.FitsFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".fits"; ValueData: "Pix42.FitsFile"
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".fts";  ValueData: "Pix42.FitsFile"
+; PSD
+Root: HKLM; Subkey: "SOFTWARE\{#AppName}\Capabilities\FileAssociations"; ValueType: string; ValueName: ".psd";  ValueData: "Pix42.PsdFile"
+
 ; ── Application registration ("Open with" shows "Pix42", not "pix42.exe") ────
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExeName}"; \
     ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
@@ -188,6 +246,12 @@ Root: HKA; Subkey: "Software\Classes\*\shell\Pix42\command"; \
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; \
     Flags: nowait postinstall skipifsilent
+; On Windows 10/11 file associations for common types (jpg, png, tif…) are
+; protected by a per-user hash and cannot be set silently by installers.
+; This optional step opens Settings → Default Apps so the user can pick Pix42.
+Filename: "ms-settings:defaultapps"; \
+    Description: "Set Pix42 as default for image files (opens Windows Settings)"; \
+    Flags: shellexec postinstall skipifsilent unchecked
 
 ; ---------------------------------------------------------------------------
 [Code]
