@@ -7,9 +7,9 @@ from collections import deque
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Qt, QObject, QRect, QRunnable, QThreadPool, QPoint, QSize, QTimer, Signal, QEvent, Slot
+from PySide6.QtCore import Qt, QObject, QRect, QRunnable, QThreadPool, QPoint, QSize, QTimer, Signal, QEvent, Slot, QUrl
 from PySide6.QtCore import QFile, QFileSystemWatcher
-from PySide6.QtGui import QAction, QColor, QIcon, QImage, QKeySequence, QMouseEvent, QMovie
+from PySide6.QtGui import QAction, QColor, QDesktopServices, QIcon, QImage, QKeySequence, QMouseEvent, QMovie
 from PySide6.QtWidgets import (
     QMainWindow, QMenu, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QStackedWidget, QFileDialog, QMessageBox, QStatusBar, QLabel, QPushButton,
@@ -1304,6 +1304,10 @@ class MainWindow(QMainWindow):
         self._about_act = QAction("&About Pix42…", self)
         self._about_act.triggered.connect(self._show_about)
         help_menu.addAction(self._about_act)
+        help_menu.addSeparator()
+        self._share_act = QAction("★  Share Pix42", self)
+        self._share_act.triggered.connect(self._on_share)
+        help_menu.addAction(self._share_act)
 
         self.menuBar().hide()
 
@@ -1389,6 +1393,13 @@ class MainWindow(QMainWindow):
         _icon(self._meta_panel_act, tb_dir / "metadata.svg")
         self._meta_panel_act.setToolTip("Metadata Panel  (Ctrl+I)")
         tb.addAction(self._meta_panel_act)
+
+        tb.addSeparator()
+
+        # --- Share ---
+        _icon(self._share_act, tb_dir / "share.svg")
+        self._share_act.setToolTip("Share Pix42 with friends!")
+        tb.addAction(self._share_act)
 
         tb.addSeparator()
 
@@ -2920,6 +2931,9 @@ class MainWindow(QMainWindow):
     def _show_about(self) -> None:
         dlg = AboutDialog(self, theme=getattr(self, "_theme", "dark"))
         dlg.exec()
+
+    def _on_share(self) -> None:
+        QDesktopServices.openUrl(QUrl("https://www.demahub.com/pix42"))
 
     def _toggle_fullscreen(self) -> None:
         if self.isFullScreen():

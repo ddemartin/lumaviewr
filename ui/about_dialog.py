@@ -47,6 +47,12 @@ QPushButton#coffeeBtn {
 }
 QPushButton#coffeeBtn:hover  { background: #ff7a77; }
 QPushButton#coffeeBtn:pressed { background: #e04040; }
+QPushButton#shareBtn {
+    background: #2a82da; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: bold; padding: 8px 18px;
+}
+QPushButton#shareBtn:hover  { background: #3a92ea; }
+QPushButton#shareBtn:pressed { background: #1a72ca; }
 QPushButton#closeBtn {
     background: #ddd; color: #222; border: 1px solid #bbb;
     border-radius: 6px; font-size: 12px; padding: 6px 18px;
@@ -79,6 +85,12 @@ QPushButton#coffeeBtn {
 }
 QPushButton#coffeeBtn:hover  { background: #ff7a77; }
 QPushButton#coffeeBtn:pressed { background: #e04040; }
+QPushButton#shareBtn {
+    background: #2a82da; color: #fff; border: none;
+    border-radius: 6px; font-size: 12px; font-weight: bold; padding: 8px 18px;
+}
+QPushButton#shareBtn:hover  { background: #3a92ea; }
+QPushButton#shareBtn:pressed { background: #1a72ca; }
 QPushButton#closeBtn {
     background: #333; color: #ccc; border: 1px solid #444;
     border-radius: 6px; font-size: 12px; padding: 6px 18px;
@@ -238,11 +250,21 @@ class AboutDialog(QDialog):
             lambda: QDesktopServices.openUrl(QUrl("https://ko-fi.com/ddemartin"))
         )
 
+        share_btn = QPushButton("★  Share Pix42")
+        share_btn.setObjectName("shareBtn")
+        share_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        share_btn.setToolTip("If you like Pix42, share it with your friends!")
+        share_btn.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl("https://www.demahub.com/pix42"))
+        )
+
         close_btn = QPushButton("Close")
         close_btn.setObjectName("closeBtn")
         close_btn.clicked.connect(self.accept)
 
         btn_row.addWidget(coffee_btn)
+        btn_row.addSpacing(6)
+        btn_row.addWidget(share_btn)
         btn_row.addStretch()
         btn_row.addWidget(close_btn)
         root.addLayout(btn_row)
