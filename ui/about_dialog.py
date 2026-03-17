@@ -11,14 +11,15 @@ from PySide6.QtWidgets import (
 from config import ASSETS_DIR
 
 _CREDITS = [
-    ("PySide6",    "Qt for Python — cross-platform GUI framework"),
-    ("Pillow",     "Image reading and processing (JPEG, PNG, TIFF, WebP, …)"),
-    ("psd-tools",  "Adobe Photoshop PSD layer compositing"),
-    ("rawpy",      "RAW camera file decoding via LibRaw"),
-    ("astropy",    "FITS astronomical image support"),
-    ("NumPy",      "Numerical array operations"),
-    ("psutil",     "System resource monitoring"),
-    ("CuPy",       "GPU-accelerated array operations (optional, requires CUDA)"),
+    ("PySide6",       "Qt for Python — cross-platform GUI framework"),
+    ("Pillow",        "Image reading and processing (JPEG, PNG, TIFF, WebP, …)"),
+    ("pillow-heif",   "HEIC/HEIF image support"),
+    ("psd-tools",     "Adobe Photoshop PSD layer compositing"),
+    ("rawpy",         "RAW camera file decoding via LibRaw"),
+    ("astropy",       "FITS astronomical image support"),
+    ("NumPy",         "Numerical array operations"),
+    ("piexif",        "Lossless JPEG EXIF metadata editing"),
+    ("psutil",        "System resource monitoring"),
 ]
 
 def _make_style(theme: str) -> str:
@@ -93,7 +94,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None, theme: str = "dark") -> None:
         super().__init__(parent)
         self.setWindowTitle("About Pix42")
-        self.setFixedSize(420, 610)
+        self.setFixedSize(420, 640)
         self.setModal(True)
         self._build_ui()
         self.apply_theme(theme)
